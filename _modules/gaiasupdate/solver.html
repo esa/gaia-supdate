@@ -1,0 +1,1188 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>gaiasupdate.solver &mdash; gaiasupdate 0.1.dev1+g0c25c91a1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=6982ef98"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            gaiasupdate
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tools.html">Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../supdate_output_params.html">Output parameters</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Package documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">gaiasupdate</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Other</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../citation_license.html">Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../citation_license.html#license">License</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">gaiasupdate</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">gaiasupdate.solver</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for gaiasupdate.solver</h1><div class="highlight"><pre>
+<span></span><span class="c1">#   Copyright (c) European Space Agency, 2026.</span>
+<span class="c1">#</span>
+<span class="c1">#   This file is subject to the terms and conditions defined in file &quot;LICENSE.txt&quot;, which</span>
+<span class="c1">#   is part of this source code package. No part of the package, including</span>
+<span class="c1">#   this file, may be copied, modified, propagated, or distributed except according to</span>
+<span class="c1">#   the terms contained in the file &quot;LICENSE.txt&quot;.</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">Module for solving systems of linear equations.</span>
+
+<span class="sd">These methods are equivalent to the Java implementation in the Gaia AGIS processing software.</span>
+
+<span class="sd">Note</span>
+<span class="sd">----</span>
+<span class="sd">credit authors that contributed to this code:</span>
+<span class="sd">Sahlmann, Bombrun, Lindegren</span>
+
+<span class="sd">&quot;&quot;&quot;</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">OrderedDict</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">dataclasses</span><span class="w"> </span><span class="kn">import</span> <span class="n">dataclass</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">typing</span><span class="w"> </span><span class="kn">import</span> <span class="n">Tuple</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">scipy.linalg</span><span class="w"> </span><span class="kn">import</span> <span class="n">cho_factor</span><span class="p">,</span> <span class="n">cho_solve</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.metrics</span><span class="w"> </span><span class="kn">import</span> <span class="n">SolutionStatistic</span><span class="p">,</span> <span class="n">chi_squared</span>
+
+
+<div class="viewcode-block" id="decay_downweight">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.decay_downweight">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">decay_downweight</span><span class="p">(</span><span class="n">z</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">scale_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return weight.</span>
+
+<span class="sd">    See gaia.cu3.agistools.algo.observations.DecayDownweight.downweight(double, double).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    z : ndarray</span>
+<span class="sd">        The input data array.</span>
+<span class="sd">    scale_factor : float</span>
+<span class="sd">        The scale factor</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ndarray</span>
+<span class="sd">        Array of decay downweights</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="mf">1.77373519609519</span>
+    <span class="n">b</span> <span class="o">=</span> <span class="mf">1.14161463726663</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">scale_factor</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">z</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">piecewise</span><span class="p">(</span><span class="n">x</span><span class="p">,</span>
+                        <span class="p">[</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="mi">2</span><span class="p">,</span>
+                         <span class="p">(</span><span class="mi">2</span> <span class="o">&lt;</span> <span class="n">x</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">),</span>
+                         <span class="n">x</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">],</span>
+                        <span class="p">[</span><span class="mi">1</span><span class="p">,</span>
+                         <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="mi">1</span> <span class="o">-</span> <span class="n">a</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">b</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">3</span><span class="p">,</span>
+                         <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">x</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)])</span></div>
+
+
+
+<div class="viewcode-block" id="huber_downweight">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.huber_downweight">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">huber_downweight</span><span class="p">(</span><span class="n">z</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">scale_factor</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mf">1.</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return weight.</span>
+
+<span class="sd">    See gaia.cu3.agistools.algo.observations.HuberDownweight</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    z : ndarray</span>
+<span class="sd">        The input data array.</span>
+<span class="sd">    scale_factor : float</span>
+<span class="sd">        The scale factor</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ndarray</span>
+<span class="sd">        Array of Huber downweights</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">c</span> <span class="o">=</span> <span class="mf">2.0</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">scale_factor</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">z</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">piecewise</span><span class="p">(</span><span class="n">x</span><span class="p">,</span>
+                        <span class="p">[</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="n">c</span><span class="p">,</span>
+                         <span class="n">x</span> <span class="o">&gt;</span> <span class="n">c</span><span class="p">],</span>
+                        <span class="p">[</span><span class="mi">1</span><span class="p">,</span>
+                         <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">c</span> <span class="o">*</span> <span class="p">(</span><span class="mi">2</span> <span class="o">*</span> <span class="n">x</span> <span class="o">-</span> <span class="n">c</span><span class="p">)</span> <span class="o">/</span> <span class="n">x</span> <span class="o">**</span> <span class="mi">2</span><span class="p">])</span></div>
+
+
+
+<span class="c1"># Parameters of the AGIS solver</span>
+<span class="c1"># cf. gaia.cu3.agistools.algo.gis.source.SourceUpdateStatistics.Options</span>
+<span class="n">AGIS_SOLVER_OPTIONS</span> <span class="o">=</span> <span class="p">{}</span>
+<span class="n">AGIS_SOLVER_OPTIONS</span><span class="p">[</span><span class="s1">&#39;downweighter&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">decay_downweight</span>
+<span class="n">AGIS_SOLVER_OPTIONS</span><span class="p">[</span><span class="s1">&#39;downweightLimit&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.2</span>
+<span class="n">AGIS_SOLVER_OPTIONS</span><span class="p">[</span><span class="s1">&#39;tolEsvExcess&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-6</span>
+<span class="n">AGIS_SOLVER_OPTIONS</span><span class="p">[</span><span class="s1">&#39;maxIterExcess&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">AGIS_SOLVER_OPTIONS</span><span class="p">[</span><span class="s1">&#39;dfWeight&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1.0</span>
+<span class="n">AGIS_SOLVER_OPTIONS</span><span class="p">[</span><span class="s1">&#39;maxIterRobust&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">30</span>
+<span class="n">AGIS_SOLVER_OPTIONS</span><span class="p">[</span><span class="s1">&#39;tolEsvRobust&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mf">1e-6</span>
+
+
+<div class="viewcode-block" id="estimate_excess_noise">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.estimate_excess_noise">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">estimate_excess_noise</span><span class="p">(</span><span class="n">residuals</span><span class="p">,</span> <span class="n">sigmas</span><span class="p">,</span> <span class="n">weights</span><span class="p">,</span> <span class="n">nu</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Estimate the excess noise from given residuals.</span>
+
+<span class="sd">    See Equation 64 of Lindegren at al. 2012, A&amp;A, 538, A78.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    residuals: narray</span>
+<span class="sd">        Array of residuals.</span>
+<span class="sd">    sigmas: narray</span>
+<span class="sd">        Array of sigmas.</span>
+<span class="sd">    weights: narray</span>
+<span class="sd">        Array of weights.</span>
+<span class="sd">    nu: int</span>
+<span class="sd">        Number of degrees of freedom.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    narray</span>
+<span class="sd">        Array containing the excess noise estimation.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">sy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weights</span> <span class="o">*</span> <span class="n">residuals</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">sigmas</span> <span class="o">**</span> <span class="mi">2</span><span class="p">))</span>
+    <span class="k">if</span> <span class="n">sy</span> <span class="o">&lt;</span> <span class="n">nu</span><span class="p">:</span>
+        <span class="k">return</span> <span class="mi">0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="mi">3</span><span class="p">):</span>
+            <span class="n">dsdy</span> <span class="o">=</span> <span class="o">-</span>  <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weights</span> <span class="o">*</span> <span class="n">residuals</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">sigmas</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">y</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+            <span class="n">dy</span> <span class="o">=</span> <span class="n">sy</span> <span class="o">/</span> <span class="n">dsdy</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">sy</span> <span class="o">/</span> <span class="n">nu</span><span class="p">)</span>
+            <span class="n">y</span> <span class="o">=</span> <span class="n">y</span> <span class="o">+</span> <span class="n">dy</span>
+            <span class="n">sy</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weights</span> <span class="o">*</span> <span class="n">residuals</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">/</span> <span class="p">(</span><span class="n">sigmas</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">y</span><span class="p">))</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">y</span><span class="p">)</span></div>
+
+
+
+<div class="viewcode-block" id="robust_dispersion_estimate">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.robust_dispersion_estimate">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">robust_dispersion_estimate</span><span class="p">(</span><span class="n">residuals</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return half the intersextile range according to procedure P3 of LL83 (Eq. 22).</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    residuals : ndarray</span>
+<span class="sd">        Array of residuals.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    float</span>
+<span class="sd">        The dispersion estimate.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">quantiles</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">residuals</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">3</span> <span class="o">/</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">5</span> <span class="o">/</span> <span class="mi">6</span><span class="p">])</span>
+    <span class="k">return</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">quantiles</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span> <span class="o">-</span> <span class="n">quantiles</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">quantiles</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span></div>
+
+
+
+<div class="viewcode-block" id="solve_linear_equations">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.solve_linear_equations">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">solve_linear_equations</span><span class="p">(</span><span class="n">design_matrix_coefficients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">dependent_variable</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span>
+                           <span class="n">dependent_variable_error</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">weights</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">excess_noise</span><span class="p">:</span> <span class="nb">float</span> <span class="o">=</span> <span class="mi">0</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Use matrix inversion to solve the linear equations using least-squares.</span>
+
+<span class="sd">    Note</span>
+<span class="sd">    ----</span>
+<span class="sd">    Weights and excess noise can be accounted for as described in procedure 4 of GAIA-C3-TN-LU-LL-083.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    design_matrix_coefficients: ndarray</span>
+<span class="sd">        The normal matrix.</span>
+<span class="sd">    dependent_variable: ndarray</span>
+<span class="sd">        The measurements.</span>
+<span class="sd">    dependent_variable_error: ndarray</span>
+<span class="sd">        The measurement uncertainties.</span>
+<span class="sd">    weights: ndarray, optionl</span>
+<span class="sd">        The measurement weights.</span>
+<span class="sd">    excess_noise: float, optional</span>
+<span class="sd">        The excess noise, a term that is added in quadrature to the measurement uncertainty.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ndarray</span>
+<span class="sd">        The solution parameters.</span>
+<span class="sd">    ndarray</span>
+<span class="sd">        The residuals, i.e. observed minus calculated values.</span>
+<span class="sd">    ndarray</span>
+<span class="sd">        Inverse of the solution parameter covariance matrix.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">D</span> <span class="o">=</span> <span class="n">design_matrix_coefficients</span>
+    <span class="n">h</span> <span class="o">=</span> <span class="n">dependent_variable</span>
+
+    <span class="k">if</span> <span class="n">weights</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones_like</span><span class="p">(</span><span class="n">dependent_variable</span><span class="p">)</span>
+    <span class="n">total_variance</span> <span class="o">=</span> <span class="n">dependent_variable_error</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">excess_noise</span> <span class="o">**</span> <span class="mi">2</span>
+    <span class="n">weight_parameters</span> <span class="o">=</span> <span class="n">weights</span> <span class="o">/</span> <span class="n">total_variance</span>  <span class="c1"># obsWeight in BasicSourceUpdateCalculator</span>
+
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;solve_linear_equations: </span><span class="se">\t</span><span class="s1"> excess_noise=</span><span class="si">{</span><span class="n">excess_noise</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;solve_linear_equations: </span><span class="se">\t</span><span class="s1"> weights=</span><span class="si">{</span><span class="n">weights</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;solve_linear_equations: </span><span class="se">\t</span><span class="s1"> total_variance=</span><span class="si">{</span><span class="n">total_variance</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;solve_linear_equations: </span><span class="se">\t</span><span class="s1"> weight_parameters (obsWeight)=</span><span class="si">{</span><span class="n">weight_parameters</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">WD</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">weight_parameters</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="n">D</span>
+    <span class="n">wh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">weight_parameters</span><span class="p">)</span> <span class="o">*</span> <span class="n">h</span>
+    <span class="n">parameter_covariance_matrix_formal_inverse</span> <span class="o">=</span> <span class="n">WD</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">WD</span>  <span class="c1"># normalsFull in BasicSourceUpdateCalculator</span>
+    <span class="n">r</span> <span class="o">=</span> <span class="n">WD</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">wh</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;solve_linear_equations: </span><span class="se">\t</span><span class="s1"> r=</span><span class="si">{</span><span class="n">r</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;solve_linear_equations: </span><span class="se">\t</span><span class="s1"> parameter_covariance_matrix_formal_inverse &#39;</span>
+                  <span class="sa">f</span><span class="s1">&#39;(normalsFull)=</span><span class="si">{</span><span class="n">parameter_covariance_matrix_formal_inverse</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+    <span class="n">parameters</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">parameter_covariance_matrix_formal_inverse</span><span class="p">,</span> <span class="n">r</span><span class="p">)</span>
+    <span class="n">residuals</span> <span class="o">=</span> <span class="n">dependent_variable</span> <span class="o">-</span> <span class="n">design_matrix_coefficients</span> <span class="o">@</span> <span class="n">parameters</span>
+
+    <span class="k">return</span> <span class="n">parameters</span><span class="p">,</span> <span class="n">residuals</span><span class="p">,</span> <span class="n">parameter_covariance_matrix_formal_inverse</span></div>
+
+
+
+<div class="viewcode-block" id="get_sextiles">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.get_sextiles">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_sextiles</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return sextiles of input array.</span>
+
+<span class="sd">    Note</span>
+<span class="sd">    ----</span>
+<span class="sd">    Emulate gaia.cu3.agistools.algo.gis.source.RobustSourceUpdateCalculator.getSextiles(double[])</span>
+
+<span class="sd">    The sextiles are returned as an array of length 5 (say, double[] sext), with</span>
+<span class="sd">    sext[0] = the 1st (lowest) sextile and sext[4] = the 5th (highest) sextile.</span>
+<span class="sd">    sext[2] is the median, and (sext[4]-sext[0])/2 is half the intersextile</span>
+<span class="sd">    range, which can be used as a robust estimate of the standard deviation.</span>
+
+<span class="sd">    If the length of the input array x is &lt;= 3, then sext[0] and sext[4] equal</span>
+<span class="sd">    the minimum and maximum x values, respectively. If the length is 1, then all</span>
+<span class="sd">    sextiles equal the single x value.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    x : ndarray</span>
+<span class="sd">        An array containg the input values.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ndarray</span>
+<span class="sd">        Array containing the sextiles.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">m</span> <span class="o">=</span> <span class="mi">6</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">xs</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">x</span><span class="p">)</span>
+    <span class="n">xs</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sort</span><span class="p">(</span><span class="n">xs</span><span class="p">)</span>
+    <span class="n">sext</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">m</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">m</span> <span class="o">-</span> <span class="mi">1</span><span class="p">):</span>
+        <span class="n">p</span> <span class="o">=</span> <span class="p">(</span><span class="n">i</span> <span class="o">+</span> <span class="mi">1</span><span class="p">)</span> <span class="o">/</span> <span class="n">m</span>
+        <span class="n">lo</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">floor</span><span class="p">(</span><span class="n">p</span> <span class="o">*</span> <span class="n">n</span> <span class="o">-</span> <span class="mf">0.5</span><span class="p">))</span>
+        <span class="k">if</span> <span class="n">lo</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">sext</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">xs</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">elif</span> <span class="p">(</span><span class="n">lo</span> <span class="o">&gt;</span> <span class="n">n</span> <span class="o">-</span> <span class="mi">2</span><span class="p">):</span>
+            <span class="n">sext</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="n">xs</span><span class="p">[</span><span class="n">n</span> <span class="o">-</span> <span class="mi">1</span><span class="p">]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">h</span> <span class="o">=</span> <span class="n">p</span> <span class="o">*</span> <span class="n">n</span> <span class="o">-</span> <span class="p">(</span><span class="n">lo</span> <span class="o">+</span> <span class="mf">0.5</span><span class="p">)</span>
+            <span class="n">sext</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">h</span><span class="p">)</span> <span class="o">*</span> <span class="n">xs</span><span class="p">[</span><span class="n">lo</span><span class="p">]</span> <span class="o">+</span> <span class="n">h</span> <span class="o">*</span> <span class="n">xs</span><span class="p">[</span><span class="n">lo</span> <span class="o">+</span> <span class="mi">1</span><span class="p">]</span>
+    <span class="k">return</span> <span class="n">sext</span></div>
+
+
+
+<div class="viewcode-block" id="DesignEquation">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.DesignEquation">[docs]</a>
+<span class="nd">@dataclass</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">DesignEquation</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class to handle and solve linear equation systems like AGIS does.&quot;&quot;&quot;</span>
+
+    <span class="n">_required_parameters</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;design_matrix_coefficients&#39;</span><span class="p">,</span> <span class="s1">&#39;dependent_variable&#39;</span><span class="p">,</span> <span class="s1">&#39;dependent_variable_error&#39;</span><span class="p">]</span>
+    <span class="n">_default_array_parameters</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;excess_attitude_noise&#39;</span><span class="p">:</span> <span class="mf">0.</span><span class="p">,</span> <span class="s1">&#39;weight&#39;</span><span class="p">:</span> <span class="mf">1.</span><span class="p">,</span> <span class="s1">&#39;weight_prior&#39;</span><span class="p">:</span> <span class="mf">1.</span><span class="p">}</span>
+    <span class="n">_default_parameters</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;n_outliers&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;excess_source_variance&#39;</span><span class="p">:</span> <span class="mf">0.</span><span class="p">,</span> <span class="s1">&#39;n_solve&#39;</span><span class="p">:</span> <span class="mi">0</span><span class="p">,</span> <span class="s1">&#39;gaussian_priors&#39;</span><span class="p">:</span> <span class="kc">None</span><span class="p">}</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameters</span><span class="p">:</span> <span class="nb">dict</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialise the object.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        parameters: dict</span>
+<span class="sd">            Dictionary of inputs for constructing the design equation. The dictionary  must have</span>
+<span class="sd">            at least three entries as indicated by the `_required_parameters` attribute.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">design_matrix_coefficients</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dependent_variable</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">dependent_variable_error</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">excess_attitude_noise</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weight_prior</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_outliers</span><span class="p">:</span> <span class="nb">int</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span><span class="p">:</span> <span class="nb">float</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_solve</span><span class="p">:</span> <span class="nb">int</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">observationVariance</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span>
+
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">parameters</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">item</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_required_parameters</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span>
+            <span class="c1"># assert hasattr(self, key)</span>
+
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_default_array_parameters</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="nb">getattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_required_parameters</span><span class="p">[</span><span class="mi">0</span><span class="p">])))</span> <span class="o">*</span> <span class="n">value</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_default_parameters</span><span class="o">.</span><span class="n">items</span><span class="p">():</span>
+            <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                <span class="nb">setattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">key</span><span class="p">,</span> <span class="n">value</span><span class="p">)</span>
+
+        <span class="c1"># compute excess_attitude_noise (epsilonA) when necessary</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;observationVariance&#39;</span><span class="p">):</span>
+            <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">all</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">observationVariance</span> <span class="o">!=</span> <span class="bp">self</span><span class="o">.</span><span class="n">observation_variances</span><span class="p">):</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;DesignEquation: excess_attitude_noise is not zero; &quot;</span>
+                              <span class="s2">&quot;recomputing and setting it.&quot;</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">excess_attitude_noise</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">observationVariance</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">dependent_variable_error</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+                <span class="n">np</span><span class="o">.</span><span class="n">testing</span><span class="o">.</span><span class="n">assert_allclose</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">observationVariance</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">observation_variances</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;model&#39;</span><span class="p">)</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">model</span> <span class="o">=</span> <span class="s1">&#39;unnamed_model&#39;</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">observation_variances</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the observation variances.</span>
+
+<span class="sd">        Note</span>
+<span class="sd">        ----</span>
+<span class="sd">        This is the sum of observation uncertainties and axcess attitude/observation noise,</span>
+<span class="sd">        see Eq. 62ff of `Lindegren at al. 2012 &lt;http://adsabs.harvard.edu/abs/2012A%26A...538A..78L&gt;`__:</span>
+
+<span class="sd">        sigmaTilde_l^2 = sigma_l^2 + epsilon_a^2(t_l),</span>
+
+<span class="sd">        where obsSigma = the sigmas of the observations</span>
+
+<span class="sd">        epsilonA = Any contribution from the excess attitude noise and excess calibration noise</span>
+<span class="sd">        (but not the excess source noise).</span>
+
+<span class="sd">        See Java method setObservationVariances(double[] obsSigma, double[] epsilonA)</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ndarray</span>
+<span class="sd">            The observation variances.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">obs_variances</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dependent_variable_error</span><span class="o">**</span><span class="mi">2</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">excess_attitude_noise</span><span class="o">**</span><span class="mi">2</span>
+        <span class="k">return</span> <span class="n">obs_variances</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">n_measurements</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return current number of measurements.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dependent_variable</span><span class="p">)</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">n_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return current number of parameters.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">design_matrix_coefficients</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">n_degrees_of_freedom</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return current degrees of freedom.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_measurements</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_parameters</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">n_effective_degrees_of_freedom</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return current effective degrees of freedom.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_degrees_of_freedom</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_outliers</span>
+
+    <span class="nd">@property</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">excess_source_noise</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return current excess source noise.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span><span class="p">)</span>
+
+<div class="viewcode-block" id="DesignEquation.solve">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.DesignEquation.solve">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">solve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">solver</span><span class="o">=</span><span class="s1">&#39;agis&#39;</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Solve the equations and return results.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        solver : str</span>
+<span class="sd">            the solver to be used, default is &#39;agis&#39;</span>
+<span class="sd">        kwargs : dict</span>
+<span class="sd">            keyword arguments passed on to the solver code</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            Solution parameters and auxiliary information</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">solver</span> <span class="o">==</span> <span class="s1">&#39;least_squares&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">solve_least_squares</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">elif</span> <span class="n">solver</span> <span class="o">==</span> <span class="s1">&#39;agis&#39;</span><span class="p">:</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">solve_like_agis</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">NotImplementedError</span></div>
+
+
+<div class="viewcode-block" id="DesignEquation.basic_source_update_calculator_solve">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.DesignEquation.basic_source_update_calculator_solve">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">basic_source_update_calculator_solve</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">cholesky</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span> <span class="n">total_variance</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Tuple</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">]:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Use matrix inversion to solve the linear equations using least-squares.</span>
+
+<span class="sd">        Note</span>
+<span class="sd">        ----</span>
+<span class="sd">        Modelled after gaia.cu3.agistools.algo.gis.source.BasicSourceUpdateCalculator.solve()</span>
+
+<span class="sd">        See also solve_linear_equations function.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        cholesky: boolean, optional</span>
+<span class="sd">            Cholesky decomposition. Default: False.</span>
+<span class="sd">        total_variance: narray, optional</span>
+<span class="sd">            Total variance array. Default: None.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        narray</span>
+<span class="sd">            normals_full, which is the same as parameter_covariance_matrix_formal_inverse.</span>
+<span class="sd">        narray</span>
+<span class="sd">            rhs, right-hand side of the normal equations.</span>
+<span class="sd">        narray</span>
+<span class="sd">            Array of parameters.</span>
+<span class="sd">        narray</span>
+<span class="sd">            Array of residuals.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">normals_full</span><span class="p">,</span> <span class="n">rhs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">construct_full_normals</span><span class="p">(</span><span class="n">total_variance</span><span class="o">=</span><span class="n">total_variance</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">cholesky</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+            <span class="n">parameters</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">normals_full</span><span class="p">,</span> <span class="n">rhs</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;basic_source_update_calculator_solve using cho_solve&quot;</span><span class="p">)</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;basic_source_update_calculator_solve normals_full = </span><span class="si">{</span><span class="n">normals_full</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">5</span><span class="p">]</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+            <span class="n">c</span><span class="p">,</span> <span class="n">low</span> <span class="o">=</span> <span class="n">cho_factor</span><span class="p">(</span><span class="n">normals_full</span><span class="p">)</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;basic_source_update_calculator_solve c = </span><span class="si">{</span><span class="n">c</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;basic_source_update_calculator_solve low = </span><span class="si">{</span><span class="n">low</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">parameters</span> <span class="o">=</span> <span class="n">cho_solve</span><span class="p">((</span><span class="n">c</span><span class="p">,</span> <span class="n">low</span><span class="p">),</span> <span class="n">rhs</span><span class="p">)</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;basic_source_update_calculator_solve parameters = </span><span class="si">{</span><span class="n">parameters</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">residuals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_residuals</span><span class="p">(</span><span class="n">parameters</span><span class="p">)</span>
+
+        <span class="c1"># update counter</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">n_solve</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">normals_full</span><span class="p">,</span> <span class="n">rhs</span><span class="p">,</span> <span class="n">parameters</span><span class="p">,</span> <span class="n">residuals</span></div>
+
+
+<div class="viewcode-block" id="DesignEquation.compute_residuals">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.DesignEquation.compute_residuals">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compute_residuals</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">parameters</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute the residuals given the input parameters.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        parameters: narray</span>
+<span class="sd">            Array of parameters corresponding to a solution of the system of equations.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        narray</span>
+<span class="sd">            The computed residuals.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dependent_variable</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">design_matrix_coefficients</span> <span class="o">@</span> <span class="n">parameters</span></div>
+
+
+<div class="viewcode-block" id="DesignEquation.get_postfit_residuals">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.DesignEquation.get_postfit_residuals">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_postfit_residuals</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return post-fit residuals.</span>
+
+<span class="sd">        Note</span>
+<span class="sd">        ----</span>
+<span class="sd">        See Java method gaia.cu3.agistools.algo.gis.source.BasicSourceUpdateCalculator.getPostfitResiduals()</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">basic_source_update_calculator_solve</span><span class="p">()[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="DesignEquation.get_updates">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.DesignEquation.get_updates">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_updates</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the updates from the latest call to solve().</span>
+
+<span class="sd">        Note</span>
+<span class="sd">        ----</span>
+<span class="sd">        See Java method gaia.cu3.agistools.algo.gis.source.BasicSourceUpdateCalculator.getUpdates()</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">basic_source_update_calculator_solve</span><span class="p">()[</span><span class="o">-</span><span class="mi">2</span><span class="p">]</span></div>
+
+
+<div class="viewcode-block" id="DesignEquation.get_prefit_residuals">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.DesignEquation.get_prefit_residuals">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_prefit_residuals</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return pre-fit residuals.</span>
+
+<span class="sd">        Note</span>
+<span class="sd">        ----</span>
+<span class="sd">        See Java method gaia.cu3.agistools.algo.gis.source.BasicSourceUpdateCalculator.getPrefitResiduals()</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">dependent_variable</span></div>
+
+
+<div class="viewcode-block" id="DesignEquation.get_initial_dispersion_estimate">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.DesignEquation.get_initial_dispersion_estimate">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_initial_dispersion_estimate</span><span class="p">(</span><span class="n">data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return initial dispersion estimate of the input dataset.</span>
+
+<span class="sd">        Note</span>
+<span class="sd">        ----</span>
+<span class="sd">        See gaia.cu3.agistools.algo.gis.source.RobustSourceUpdateCalculator.getInitialDispersionEstimate(double[])</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        data : ndarray</span>
+<span class="sd">            Input dataset.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ndarray</span>
+<span class="sd">            Initial dispersion estimate of the input.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">quantile_values</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">quantile</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span> <span class="o">/</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">2</span> <span class="o">/</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">3</span> <span class="o">/</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">4</span> <span class="o">/</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">5</span> <span class="o">/</span> <span class="mi">6</span><span class="p">])</span>
+        <span class="k">return</span> <span class="mf">0.5</span> <span class="o">*</span> <span class="p">(</span><span class="n">quantile_values</span><span class="p">[</span><span class="mi">4</span><span class="p">]</span> <span class="o">-</span> <span class="n">quantile_values</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span> <span class="o">+</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">quantile_values</span><span class="p">[</span><span class="mi">2</span><span class="p">])</span></div>
+
+
+<div class="viewcode-block" id="DesignEquation.compute_n_outliers">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.DesignEquation.compute_n_outliers">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compute_n_outliers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute the number of outliers based on weights and threshold.</span>
+
+<span class="sd">        Note</span>
+<span class="sd">        ----</span>
+<span class="sd">        See gaia.cu3.agistools.algo.gis.source.SourceUpdateStatistics.getNOut()</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        narray</span>
+<span class="sd">            n_outliers</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">downweights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_downweights</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>  <span class="c1"># return downweight * downweight_prior</span>
+        <span class="n">n_outliers</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">downweights</span> <span class="o">&lt;</span> <span class="n">AGIS_SOLVER_OPTIONS</span><span class="p">[</span><span class="s1">&#39;downweightLimit&#39;</span><span class="p">])</span>
+        <span class="k">return</span> <span class="n">n_outliers</span></div>
+
+
+<div class="viewcode-block" id="DesignEquation.get_index_keep">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.DesignEquation.get_index_keep">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_index_keep</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return the indices of the measurements that are not outliers.&quot;&quot;&quot;</span>
+        <span class="n">downweights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_downweights</span><span class="p">(</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">index_keep</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">downweights</span> <span class="o">&gt;=</span> <span class="n">AGIS_SOLVER_OPTIONS</span><span class="p">[</span><span class="s1">&#39;downweightLimit&#39;</span><span class="p">])[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="k">if</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">index_keep</span><span class="p">)</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_n_outliers</span><span class="p">()</span> <span class="o">!=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="p">)):</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Number of outliers is inconsistent.&quot;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">index_keep</span></div>
+
+
+<div class="viewcode-block" id="DesignEquation.calculate_estimate">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.DesignEquation.calculate_estimate">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_estimate</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Calculate the solution estimate.</span>
+
+<span class="sd">        Note</span>
+<span class="sd">        ----</span>
+<span class="sd">        See gaia.cu3.agistools.algo.gis.source.RobustSourceUpdateCalculator.calculateEstimate()</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        narray</span>
+<span class="sd">            Excess source noise.</span>
+<span class="sd">        narray</span>
+<span class="sd">            Excess source noise significance.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># try first with excess source variance = 0</span>
+        <span class="n">excess_source_noise</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span> <span class="o">=</span> <span class="n">excess_source_noise</span><span class="o">**</span><span class="mi">2</span>
+
+        <span class="c1"># gaia.cu3.agistools.algo.gis.source.RobustSourceUpdateCalculator.setDefaultDownweights()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">n_measurements</span><span class="p">)</span>
+
+        <span class="n">iterRobust</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">ssr</span><span class="p">,</span> <span class="n">ssr_derivative</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_weighted_ssr_and_derivative</span><span class="p">()</span>
+        <span class="n">sMin0</span> <span class="o">=</span> <span class="n">ssr</span>
+
+        <span class="n">dof</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_effective_degrees_of_freedom</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;initial dof = </span><span class="si">{</span><span class="n">dof</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="c1"># iter_excess = 0</span>
+        <span class="n">excess_source_noise_significance</span> <span class="o">=</span> <span class="mf">0.</span>
+
+        <span class="c1"># if sMin0 &lt;= dof we are done; otherwise try to set a reasonable excess source</span>
+        <span class="c1"># noise to eliminate gross outliers</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">sMin0</span> <span class="o">&gt;</span> <span class="n">dof</span><span class="p">):</span>
+            <span class="n">excess_source_variance_old</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span>
+            <span class="n">excess_source_noise_improved</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_initial_dispersion_estimate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_prefit_residuals</span><span class="p">())</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;self.get_initial_dispersion_estimate(self.get_prefit_residuals()) = </span><span class="se">\</span>
+<span class="s2">            </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">get_initial_dispersion_estimate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_prefit_residuals</span><span class="p">())</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">excess_source_variance_improved</span> <span class="o">=</span> <span class="n">excess_source_noise_improved</span><span class="o">**</span><span class="mi">2</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span> <span class="o">=</span> <span class="n">excess_source_variance_improved</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;self.excess_source_variance = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;calculate_estimate self.get_prefit_residuals() = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">get_prefit_residuals</span><span class="p">()[</span><span class="mi">0</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;self.observation_variances = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">observation_variances</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="n">downweights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calculate_downweights</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_prefit_residuals</span><span class="p">())</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;downweights!=1 = </span><span class="si">{</span><span class="n">downweights</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">downweights</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="n">downweights</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">n_outliers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_n_outliers</span><span class="p">()</span>
+            <span class="n">dof</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_effective_degrees_of_freedom</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;updated dof = </span><span class="si">{</span><span class="n">dof</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="n">excess_source_variance_delta</span> <span class="o">=</span> <span class="n">excess_source_variance_improved</span> <span class="o">-</span> <span class="n">excess_source_variance_old</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Before robust loop: excess_source_variance_delta = </span><span class="se">\</span>
+<span class="s2">            </span><span class="si">{</span><span class="n">excess_source_variance_delta</span><span class="si">}</span><span class="s2">, excess_source_variance=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">while</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">excess_source_variance_delta</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">AGIS_SOLVER_OPTIONS</span><span class="p">[</span><span class="s1">&#39;tolEsvRobust&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span><span class="p">)</span> \
+                    <span class="ow">and</span> <span class="p">(</span><span class="n">iterRobust</span> <span class="o">&lt;</span> <span class="n">AGIS_SOLVER_OPTIONS</span><span class="p">[</span><span class="s1">&#39;maxIterRobust&#39;</span><span class="p">]):</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Robust estimator iteration </span><span class="si">{</span><span class="n">iterRobust</span><span class="si">}</span><span class="s2">: excess_source_variance=</span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">iterRobust</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">excess_source_variance_old</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span>
+                <span class="n">excess_source_variance_improved</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_improved_estimate_of_excess_source_variance</span><span class="p">(</span><span class="n">dof</span><span class="p">)</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;excess_source_variance_improved = </span><span class="si">{</span><span class="n">excess_source_variance_improved</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Robust estimator iteration </span><span class="si">{</span><span class="n">iterRobust</span><span class="si">}</span><span class="s2">: </span><span class="se">\</span>
+<span class="s2">                self.get_improved_estimate_of_excess_source_variance(dof) = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">get_improved_estimate_of_excess_source_variance</span><span class="p">(</span><span class="n">dof</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+                <span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span> <span class="o">=</span> <span class="n">excess_source_variance_improved</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">weight</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calculate_downweights</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">get_postfit_residuals</span><span class="p">())</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">n_outliers</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_n_outliers</span><span class="p">()</span>
+                <span class="n">dof</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_effective_degrees_of_freedom</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;iterRobust=</span><span class="si">{</span><span class="n">iterRobust</span><span class="si">}</span><span class="s2">: dof = </span><span class="si">{</span><span class="n">dof</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+                <span class="n">excess_source_variance_delta</span> <span class="o">=</span> <span class="n">excess_source_variance_improved</span> <span class="o">-</span> <span class="n">excess_source_variance_old</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Robust estimator iteration </span><span class="si">{</span><span class="n">iterRobust</span><span class="si">}</span><span class="s2">: excess_source_variance = </span><span class="se">\</span>
+<span class="s2">                </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span><span class="si">}</span><span class="s2">; excess_source_variance_delta = </span><span class="si">{</span><span class="n">excess_source_variance_delta</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="n">excess_source_noise</span><span class="p">,</span> <span class="n">excess_source_noise_significance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calculate_excess_source_noise</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="n">excess_source_noise</span><span class="p">,</span> <span class="n">excess_source_noise_significance</span></div>
+
+
+<div class="viewcode-block" id="DesignEquation.solve_like_agis">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.DesignEquation.solve_like_agis">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">solve_like_agis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">total_variance</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="nb">dict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Solve linear equations like AGIS.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        total_variance: float</span>
+<span class="sd">            Total variance.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            Dictionary with information on the solution.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">total_variance</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">excess_source_noise</span><span class="p">,</span> <span class="n">excess_source_noise_significance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">calculate_estimate</span><span class="p">()</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;solve_like_agis: excess_source_noise = </span><span class="si">{</span><span class="n">excess_source_noise</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Computing direct solution using fixed weights and external total variance (no inner iterations).&#39;</span><span class="p">)</span>
+            <span class="n">excess_source_noise</span> <span class="o">=</span> <span class="kc">None</span>
+            <span class="n">excess_source_noise_significance</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># get the best-fit parameters of the model</span>
+        <span class="n">parameter_covariance_matrix_formal_inverse</span><span class="p">,</span> <span class="n">rhs</span><span class="p">,</span> <span class="n">parameters</span><span class="p">,</span> <span class="n">residuals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">basic_source_update_calculator_solve</span><span class="p">(</span><span class="n">total_variance</span><span class="o">=</span><span class="n">total_variance</span><span class="p">)</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;solver&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;agis&#39;</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameters&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">parameters</span>
+
+        <span class="c1"># keep  only ‘good’ (i.e. not strongly downweighted) observations for fit metric calculations</span>
+        <span class="c1"># this is consistent with documentation:</span>
+        <span class="c1"># https://gea.esac.esa.int/archive/documentation/GEDR3/Gaia_archive/chap_datamodel/sec_dm_main_tables/ssec_dm_gaia_source.html</span>
+        <span class="n">index_keep</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_index_keep</span><span class="p">()</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;residuals&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">residuals</span><span class="p">[</span><span class="n">index_keep</span><span class="p">]</span>
+
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;index_keep&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">index_keep</span>
+
+        <span class="c1">#  optional: specify timestamps of used observations</span>
+        <span class="k">if</span> <span class="nb">hasattr</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="s1">&#39;timestamps&#39;</span><span class="p">):</span>
+            <span class="n">results</span><span class="p">[</span><span class="s1">&#39;timestamps_of_used_observations&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">timestamps</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">index_keep</span><span class="p">]</span>
+
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;weights&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight</span><span class="p">[</span><span class="n">index_keep</span><span class="p">]</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;n_data_total&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_measurements</span>
+
+        <span class="c1"># number of measurements/constraints, i.e. number of equations</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;n_measurements&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_measurements</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_n_outliers</span><span class="p">()</span>
+
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameter_covariance_matrix_formal_inverse&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">parameter_covariance_matrix_formal_inverse</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameter_covariance_matrix_formal&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameter_covariance_matrix_formal_inverse&#39;</span><span class="p">])</span>
+
+        <span class="c1"># formal uncertainty  of the solution parameters</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameters_formal_uncertainty&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameter_covariance_matrix_formal&#39;</span><span class="p">]))</span>
+
+        <span class="c1"># number free parameters</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;n_parameters&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameters&#39;</span><span class="p">])</span>
+
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;excess_noise&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">excess_source_noise</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;n_outliers&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_n_outliers</span><span class="p">()</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;significance&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">excess_source_noise_significance</span>
+
+        <span class="c1"># check setting of total variance, since this goes into ln likelyhood and BIC</span>
+        <span class="c1"># total variance of measurements</span>
+        <span class="c1"># results[&#39;total_variance&#39;] = self.dependent_variable_error[index_keep]**2 + excess_source_noise**2</span>
+        <span class="k">if</span> <span class="n">total_variance</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">results</span><span class="p">[</span><span class="s1">&#39;total_variance&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">observation_variances</span><span class="p">[</span><span class="n">index_keep</span><span class="p">]</span> <span class="o">+</span> <span class="n">excess_source_noise</span><span class="o">**</span><span class="mi">2</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">results</span><span class="p">[</span><span class="s1">&#39;total_variance&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">total_variance</span>
+
+        <span class="c1"># results[&#39;measurement_variance&#39;] = self.dependent_variable_error[index_keep]**2</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;measurement_variance&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">observation_variances</span><span class="p">[</span><span class="n">index_keep</span><span class="p">]</span>
+
+        <span class="c1"># parameter covariance matrix normalised to yield chi2=1</span>
+        <span class="n">chi2</span> <span class="o">=</span> <span class="n">chi_squared</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;residuals&#39;</span><span class="p">],</span> <span class="n">results</span><span class="p">[</span><span class="s1">&#39;measurement_variance&#39;</span><span class="p">])</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameter_covariance_matrix_normalised&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameter_covariance_matrix_formal&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">chi2</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_effective_degrees_of_freedom</span>
+        <span class="c1"># normalised uncertainty of the solution parameters</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameters_normalised_uncertainty&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameter_covariance_matrix_normalised&#39;</span><span class="p">]))</span>
+
+        <span class="n">keys_for_stats</span> <span class="o">=</span> <span class="n">SolutionStatistic</span><span class="o">.</span><span class="n">_required_parameters</span> <span class="o">+</span> <span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="s1">&#39;solver&#39;</span><span class="p">,</span> <span class="s1">&#39;excess_noise&#39;</span><span class="p">,</span> <span class="s1">&#39;n_outliers&#39;</span><span class="p">]</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;solution_statistic&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">SolutionStatistic</span><span class="p">({</span><span class="n">key</span><span class="p">:</span> <span class="n">results</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys_for_stats</span><span class="p">})</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;solve_like_agis result: </span><span class="si">{}</span><span class="s1">/</span><span class="si">{}</span><span class="s1"> measurements are considered outliers&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;n_outliers&#39;</span><span class="p">],</span> <span class="n">results</span><span class="p">[</span><span class="s1">&#39;n_data_total&#39;</span><span class="p">]))</span>
+
+        <span class="k">return</span> <span class="n">results</span></div>
+
+
+<div class="viewcode-block" id="DesignEquation.solve_least_squares">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.DesignEquation.solve_least_squares">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">solve_least_squares</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Solve equations with a standard least-square solver.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            Dictionary containing information about the solution.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># solve the equations</span>
+        <span class="n">parameters</span><span class="p">,</span> <span class="n">residuals</span><span class="p">,</span> <span class="n">N</span> <span class="o">=</span> <span class="n">solve_linear_equations</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">design_matrix_coefficients</span><span class="p">,</span>
+                                                          <span class="bp">self</span><span class="o">.</span><span class="n">dependent_variable</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">dependent_variable_error</span><span class="p">)</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;solver&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="s1">&#39;least-squares&#39;</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">model</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameters&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">parameters</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;residuals&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">residuals</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameter_covariance_matrix_formal_inverse&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">N</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameter_covariance_matrix_formal&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">inv</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameter_covariance_matrix_formal_inverse&#39;</span><span class="p">])</span>
+
+        <span class="c1"># formal uncertainty of the solution parameters</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameters_formal_uncertainty&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameter_covariance_matrix_formal&#39;</span><span class="p">]))</span>
+
+        <span class="c1"># number of measurements/constraints, i.e. number of equations</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;n_measurements&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">dependent_variable</span><span class="p">)</span>
+
+        <span class="c1"># number of free parameters</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;n_parameters&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameters&#39;</span><span class="p">])</span>
+
+        <span class="c1"># total variance of measurements</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;total_variance&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dependent_variable_error</span> <span class="o">**</span> <span class="mi">2</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;measurement_variance&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s1">&#39;total_variance&#39;</span><span class="p">]</span>
+
+        <span class="c1"># parameter covariance matrix normalised to yield chi2=1</span>
+        <span class="n">chi2</span> <span class="o">=</span> <span class="n">chi_squared</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;residuals&#39;</span><span class="p">],</span> <span class="n">results</span><span class="p">[</span><span class="s1">&#39;measurement_variance&#39;</span><span class="p">])</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameter_covariance_matrix_normalised&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameter_covariance_matrix_formal&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">chi2</span> <span class="o">/</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_effective_degrees_of_freedom</span>
+        <span class="c1"># normalised uncertainty of the solution parameters</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameters_normalised_uncertainty&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">diag</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameter_covariance_matrix_normalised&#39;</span><span class="p">]))</span>
+
+        <span class="n">keys_for_stats</span> <span class="o">=</span> <span class="n">SolutionStatistic</span><span class="o">.</span><span class="n">_required_parameters</span> <span class="o">+</span> <span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">,</span> <span class="s1">&#39;solver&#39;</span><span class="p">]</span>
+        <span class="n">results</span><span class="p">[</span><span class="s1">&#39;solution_statistic&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">SolutionStatistic</span><span class="p">({</span><span class="n">key</span><span class="p">:</span> <span class="n">results</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">keys_for_stats</span><span class="p">})</span>
+
+        <span class="k">return</span> <span class="n">results</span></div>
+
+
+<div class="viewcode-block" id="DesignEquation.construct_full_normals">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.DesignEquation.construct_full_normals">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">construct_full_normals</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">total_variance</span><span class="o">=</span><span class="kc">None</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Replicate Java method constructFullNormals.</span>
+
+<span class="sd">        Note</span>
+<span class="sd">        ----</span>
+<span class="sd">        gaia.cu3.agistools.algo.gis.source.BasicSourceUpdateCalculator.constructFullNormals()</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        total_variance: narray, optional</span>
+<span class="sd">            Array of total variances.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        narray</span>
+<span class="sd">            Parameter covariance matrix formal inverse.</span>
+<span class="sd">        narray</span>
+<span class="sd">            rhs, right-hand side of the normal equations.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">weights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight_prior</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;construct_full_normals: </span><span class="se">\t</span><span class="s2"> self.excess_source_variance = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">total_variance</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">total_variance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">observation_variances</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span>
+
+        <span class="n">weight_parameters</span> <span class="o">=</span> <span class="n">weights</span> <span class="o">/</span> <span class="n">total_variance</span>  <span class="c1"># obsWeight in BasicSourceUpdateCalculator</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;construct_full_normals: </span><span class="se">\t</span><span class="s1"> weight_parameters (obsWeight) = </span><span class="si">{</span><span class="n">weight_parameters</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span><span class="si">}</span><span class="s1">...&#39;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;construct_full_normals: </span><span class="se">\t</span><span class="s1"> design_matrix_coefficients = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">design_matrix_coefficients</span><span class="si">}</span><span class="s1">...&#39;</span><span class="p">)</span>
+
+        <span class="n">WD</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">weight_parameters</span><span class="p">)</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="o">-</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">design_matrix_coefficients</span>  <span class="c1"># == Math.sqrt(obsWeight) * obs.partialDerivatives</span>
+        <span class="n">wh</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">weight_parameters</span><span class="p">)</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">dependent_variable</span>  <span class="c1"># == Math.sqrt(obsWeight) * obs.prefitResidual</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;construct_full_normals: </span><span class="se">\t</span><span class="s1"> Math.sqrt(obsWeight) * obs.partialDerivatives=(normalsLhs)=(WD)=</span><span class="si">{</span><span class="n">WD</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span><span class="si">}</span><span class="s1">...&#39;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;construct_full_normals: </span><span class="se">\t</span><span class="s1"> Math.sqrt(obsWeight) * obs.prefitResidual=(wh)=</span><span class="si">{</span><span class="n">wh</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span><span class="si">}</span><span class="s1">...&#39;</span><span class="p">)</span>
+
+        <span class="n">rhs</span> <span class="o">=</span> <span class="n">WD</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">wh</span>  <span class="c1"># right-hand side of the normal equations</span>
+
+        <span class="n">parameter_covariance_matrix_formal_inverse</span> <span class="o">=</span> <span class="n">WD</span><span class="o">.</span><span class="n">T</span> <span class="o">@</span> <span class="n">WD</span>  <span class="c1"># normalsFull in BasicSourceUpdateCalculator</span>
+
+        <span class="c1"># add a prior when specified</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">gaussian_priors</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gaussian_priors</span><span class="p">)</span>
+            <span class="c1"># add Gaussian prior on the matrix diagonal</span>
+            <span class="n">diagonal_indices</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">diag_indices_from</span><span class="p">(</span><span class="n">parameter_covariance_matrix_formal_inverse</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">ii</span><span class="p">,</span> <span class="n">prior</span> <span class="ow">in</span> <span class="nb">enumerate</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">gaussian_priors</span><span class="p">):</span>
+                <span class="k">if</span> <span class="n">prior</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+                    <span class="n">parameter_covariance_matrix_formal_inverse</span><span class="p">[</span><span class="n">diagonal_indices</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">ii</span><span class="p">],</span> <span class="n">diagonal_indices</span><span class="p">[</span><span class="mi">1</span><span class="p">][</span><span class="n">ii</span><span class="p">]]</span> <span class="o">+=</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="nb">float</span><span class="p">(</span><span class="n">prior</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;construct_full_normals: </span><span class="se">\t</span><span class="s1"> parameter_covariance_matrix_formal_inverse (normalsFull) = </span><span class="se">\</span>
+<span class="s1">        </span><span class="si">{</span><span class="n">parameter_covariance_matrix_formal_inverse</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;construct_full_normals: </span><span class="se">\t</span><span class="s1"> rhs (rhs)=</span><span class="si">{</span><span class="n">rhs</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">parameter_covariance_matrix_formal_inverse</span><span class="p">,</span> <span class="n">rhs</span></div>
+
+
+<div class="viewcode-block" id="DesignEquation.get_weighted_ssr_and_derivative">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.DesignEquation.get_weighted_ssr_and_derivative">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_weighted_ssr_and_derivative</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>  <span class="c1"># , excess_source_variance=0):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return weighted sum of squared residuals and its derivative.&quot;&quot;&quot;</span>
+        <span class="n">normals_full</span><span class="p">,</span> <span class="n">rhs</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">construct_full_normals</span><span class="p">()</span>
+        <span class="n">parameters</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linalg</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">normals_full</span><span class="p">,</span> <span class="n">rhs</span><span class="p">)</span>
+        <span class="n">residuals</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">dependent_variable</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">design_matrix_coefficients</span> <span class="o">@</span> <span class="n">parameters</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;get_weighted_ssr_and_derivative PostfitResiduals = </span><span class="si">{</span><span class="n">residuals</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">4</span><span class="p">]</span><span class="si">}</span><span class="s2">...&quot;</span><span class="p">)</span>
+
+        <span class="n">ssr</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">residuals</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight</span> <span class="o">*</span> <span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">observation_variances</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span><span class="p">))</span>
+        <span class="n">ssr_derivative</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">np</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">residuals</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">/</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">observation_variances</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span><span class="p">))</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">ssr</span><span class="p">,</span> <span class="n">ssr_derivative</span></div>
+
+
+<div class="viewcode-block" id="DesignEquation.get_improved_estimate_of_excess_source_variance">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.DesignEquation.get_improved_estimate_of_excess_source_variance">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_improved_estimate_of_excess_source_variance</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">dof</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return an improved estimate of the excess source noise.</span>
+
+<span class="sd">        Note</span>
+<span class="sd">        ----</span>
+<span class="sd">        This uses the currently set data, variances and downweights.</span>
+<span class="sd">        It implements a single iteration of algorithm P1 in GAIA-C3-TN-LU-LL-083.</span>
+
+<span class="sd">        See the Java method getImprovedEstimateOfExcessSourceVariance(int dof).</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        dof : int</span>
+<span class="sd">            degrees of freedom</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            Applied change in excess source variance.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_weighted_ssr_and_derivative</span><span class="p">()</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;get_improved_estimate_of_excess_source_variance  self.get_weighted_ssr_and_derivative() </span><span class="se">\</span>
+<span class="s2">        = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">get_weighted_ssr_and_derivative</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">deltaVar</span> <span class="o">=</span> <span class="o">-</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">s</span><span class="p">[</span><span class="mi">1</span><span class="p">])</span> <span class="o">*</span> <span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">/</span> <span class="n">dof</span> <span class="o">-</span> <span class="mf">1.0</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span> <span class="o">+</span> <span class="n">deltaVar</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">]))</span></div>
+
+
+<div class="viewcode-block" id="DesignEquation.calculate_excess_source_noise">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.DesignEquation.calculate_excess_source_noise">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_excess_source_noise</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute and return excess source noise.</span>
+
+<span class="sd">        Note</span>
+<span class="sd">        ----</span>
+<span class="sd">        Calculates and sets the excess source noise and significance for the currently set (fixed)</span>
+<span class="sd">        variances and downweights. This implements algorithm P1 in GAIA-C3-TN-LU-LL-083.</span>
+
+<span class="sd">        See corresponding Java code:</span>
+<span class="sd">        gaia.cu3.agistools.algo.gis.source.RobustSourceUpdateCalculator.calculateExcessSourceNoise()</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        float</span>
+<span class="sd">            The source excess noise.</span>
+<span class="sd">        float</span>
+<span class="sd">            The source excess noise significance.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">excess_source_noise_significance</span> <span class="o">=</span> <span class="mf">0.</span>
+
+        <span class="n">ssr</span><span class="p">,</span> <span class="n">ssr_derivative</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_weighted_ssr_and_derivative</span><span class="p">()</span>
+        <span class="n">sMin0</span> <span class="o">=</span> <span class="n">ssr</span>
+
+        <span class="n">dof</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">n_effective_degrees_of_freedom</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;calculate_excess_source_noise: dof = </span><span class="si">{</span><span class="n">dof</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="n">iter_excess</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">sMin0</span> <span class="o">&gt;</span> <span class="n">dof</span><span class="p">):</span>
+            <span class="n">excess_source_variance_old</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span>
+            <span class="n">excess_source_variance_improved</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_improved_estimate_of_excess_source_variance</span><span class="p">(</span><span class="n">dof</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span> <span class="o">=</span> <span class="n">excess_source_variance_improved</span>
+            <span class="n">excess_source_variance_delta</span> <span class="o">=</span> <span class="n">excess_source_variance_improved</span> <span class="o">-</span> <span class="n">excess_source_variance_old</span>
+            <span class="k">while</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">excess_source_variance_delta</span><span class="p">)</span> <span class="o">&gt;</span> <span class="n">AGIS_SOLVER_OPTIONS</span><span class="p">[</span><span class="s1">&#39;tolEsvExcess&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span><span class="p">)</span> \
+                    <span class="ow">and</span> <span class="p">(</span><span class="n">iter_excess</span> <span class="o">&lt;</span> <span class="n">AGIS_SOLVER_OPTIONS</span><span class="p">[</span><span class="s1">&#39;maxIterExcess&#39;</span><span class="p">]):</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;calculate_excess_source_noise: Excess noise iteration </span><span class="si">{</span><span class="n">iter_excess</span><span class="si">}</span><span class="s2">: </span><span class="se">\</span>
+<span class="s2">                excess_source_variance = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+                <span class="n">iter_excess</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="n">excess_source_variance_old</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span>
+                <span class="n">excess_source_variance_improved</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_improved_estimate_of_excess_source_variance</span><span class="p">(</span><span class="n">dof</span><span class="p">)</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span> <span class="o">=</span> <span class="n">excess_source_variance_improved</span>
+                <span class="n">excess_source_variance_delta</span> <span class="o">=</span> <span class="n">excess_source_variance_improved</span> <span class="o">-</span> <span class="n">excess_source_variance_old</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;calculate_excess_source_noise: Excess noise iteration </span><span class="si">{</span><span class="n">iter_excess</span><span class="si">}</span><span class="s2">: </span><span class="se">\</span>
+<span class="s2">                excess_source_variance = </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="c1"># // Eq.(10)</span>
+            <span class="n">excess_source_noise_significance</span> <span class="o">=</span> <span class="p">(</span><span class="n">sMin0</span> <span class="o">-</span> <span class="n">dof</span><span class="p">)</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="mf">2.0</span> <span class="o">*</span> <span class="n">dof</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">excess_source_noise</span><span class="p">,</span> <span class="n">excess_source_noise_significance</span></div>
+
+
+<div class="viewcode-block" id="DesignEquation.get_downweights">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.DesignEquation.get_downweights">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_downweights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">multiply_by_prior</span><span class="p">:</span> <span class="nb">bool</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return array of the currently defined downweights.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ndarray</span>
+<span class="sd">            Array of downweights.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">downweights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight</span>
+        <span class="k">if</span> <span class="n">multiply_by_prior</span><span class="p">:</span>
+            <span class="n">downweights</span> <span class="o">*=</span> <span class="bp">self</span><span class="o">.</span><span class="n">weight_prior</span>
+        <span class="k">return</span> <span class="n">downweights</span></div>
+
+
+<div class="viewcode-block" id="DesignEquation.calculate_downweights">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.DesignEquation.calculate_downweights">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">calculate_downweights</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">residuals</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return downweights for a given array of residuals.</span>
+
+<span class="sd">        Note</span>
+<span class="sd">        ----</span>
+<span class="sd">        See gaia.cu3.agistools.algo.gis.source.RobustSourceUpdateCalculator.calculateDownweights.</span>
+<span class="sd">        Calculates downweights for a given array of residuals, using the current variances and</span>
+<span class="sd">        excess source noise. This implements algorithm P2, i.e. Eq. (20) in GAIA-C3-TN-LU-LL-083.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        residuals : ndarray</span>
+<span class="sd">            Array of residuals.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        ndarray</span>
+<span class="sd">            Array of downweights.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">downweights</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_downweights</span><span class="p">(</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">total_variance</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">observation_variances</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">excess_source_variance</span>
+        <span class="n">normalised_residuals</span> <span class="o">=</span> <span class="n">residuals</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">total_variance</span><span class="p">)</span>
+        <span class="n">downweights_new</span> <span class="o">=</span> <span class="n">AGIS_SOLVER_OPTIONS</span><span class="p">[</span><span class="s1">&#39;downweighter&#39;</span><span class="p">](</span><span class="n">normalised_residuals</span><span class="p">,</span> <span class="n">AGIS_SOLVER_OPTIONS</span><span class="p">[</span><span class="s1">&#39;dfWeight&#39;</span><span class="p">])</span>
+
+        <span class="c1"># Only update the downweights if they are being used</span>
+        <span class="n">index_used</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">weight_prior</span> <span class="o">==</span> <span class="mi">1</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+        <span class="n">downweights</span><span class="p">[</span><span class="n">index_used</span><span class="p">]</span> <span class="o">=</span> <span class="n">downweights_new</span><span class="p">[</span><span class="n">index_used</span><span class="p">]</span>
+
+        <span class="k">return</span> <span class="n">downweights</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="agis_weight_function">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.agis_weight_function">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">agis_weight_function</span><span class="p">(</span><span class="n">z</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Evaluate AGIS weight function as defined in Eq. 66 of Lindegren et al. 2012.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    z : ndarray</span>
+<span class="sd">        Input data array</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ndarray</span>
+<span class="sd">        An array on weights</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">z</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">piecewise</span><span class="p">(</span><span class="n">x</span><span class="p">,</span>
+                        <span class="p">[</span><span class="n">x</span> <span class="o">&lt;=</span> <span class="mi">2</span><span class="p">,</span> <span class="p">(</span><span class="mi">2</span> <span class="o">&lt;</span> <span class="n">x</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">x</span> <span class="o">&lt;</span> <span class="mi">3</span><span class="p">),</span> <span class="n">x</span> <span class="o">&gt;=</span> <span class="mi">3</span><span class="p">],</span>
+                        <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="mi">1</span> <span class="o">-</span> <span class="mf">1.773735</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="mf">1.141615</span> <span class="o">*</span> <span class="p">(</span><span class="n">x</span> <span class="o">-</span> <span class="mi">2</span><span class="p">)</span> <span class="o">**</span> <span class="mi">3</span><span class="p">,</span>
+                            <span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="n">x</span> <span class="o">/</span> <span class="mi">3</span><span class="p">)])</span></div>
+
+
+
+<div class="viewcode-block" id="agis_weights">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.solver.agis_weights">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">agis_weights</span><span class="p">(</span><span class="n">residuals</span><span class="p">,</span> <span class="n">uncertainties</span><span class="p">,</span> <span class="n">excess_noise</span><span class="p">,</span> <span class="n">weight_threshold</span><span class="o">=</span><span class="mf">0.2</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Return the residual down weight factors and identify outliers.</span>
+
+<span class="sd">    Note</span>
+<span class="sd">    ----</span>
+<span class="sd">    See procedure P2 in GAIA-C3-TN-LU-LL-083 (Eq. 21) from the `Archive documentation &lt;https://gea.esac.esa.int/archive/documentation/GEDR3/Gaia_archive/chap_datamodel/sec_dm_main_tables/ssec_dm_gaia_source.html&gt;`__.</span>
+
+<span class="sd">    astrometric_n_good_obs_al : Number of good observations AL (short)</span>
+<span class="sd">    Number of AL observations (= CCD transits) that were not strongly downweighted in the astrometric</span>
+<span class="sd">    solution of the source. Strongly downweighted observations (with downweighting factor 𝑤&lt;0.2)</span>
+<span class="sd">    are instead counted in astrometric_n_bad_obs_al.</span>
+
+<span class="sd">    The sum of astrometric_n_good_obs_al and astrometric_n_bad_obs_al equals astrometric_n_obs_al,</span>
+<span class="sd">    the total number of AL observations used in the astrometric solution of the source.</span>
+
+<span class="sd">    Parameters</span>
+<span class="sd">    ----------</span>
+<span class="sd">    residuals: narray</span>
+<span class="sd">        Array of residuals.</span>
+<span class="sd">    uncertainties: narray</span>
+<span class="sd">        Array of uncertainties.</span>
+<span class="sd">    excess_noise: narray.</span>
+<span class="sd">        Array of excess noises.</span>
+<span class="sd">    weight_threshold: float</span>
+<span class="sd">        Cutoff below which measurements are considered to be outliers.</span>
+
+<span class="sd">    Returns</span>
+<span class="sd">    -------</span>
+<span class="sd">    ndarray</span>
+<span class="sd">        Array of weights.</span>
+<span class="sd">    int</span>
+<span class="sd">        Number of outliers.</span>
+<span class="sd">    ndarray</span>
+<span class="sd">        Array of the good indices.</span>
+
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">if</span> <span class="n">np</span><span class="o">.</span><span class="n">any</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">uncertainties</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">excess_noise</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">):</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;excess_noise=</span><span class="si">{</span><span class="n">excess_noise</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="s1">&#39;agis_weights was given uncertainties with at least one zero entry.&#39;</span><span class="p">)</span>
+
+    <span class="n">argument</span> <span class="o">=</span> <span class="n">residuals</span> <span class="o">/</span> <span class="n">np</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">uncertainties</span> <span class="o">**</span> <span class="mi">2</span> <span class="o">+</span> <span class="n">excess_noise</span> <span class="o">**</span> <span class="mi">2</span><span class="p">)</span>  <span class="c1"># normalizedResidual in calculateDownweights</span>
+
+    <span class="c1"># compute weights</span>
+    <span class="n">weights</span> <span class="o">=</span> <span class="n">agis_weight_function</span><span class="p">(</span><span class="n">argument</span><span class="p">)</span>
+
+    <span class="c1"># outlier_index = np.where(weights &lt; weight_threshold)[0]</span>
+
+    <span class="c1"># index of ‘good’ (i.e. not strongly downweighted) observations</span>
+    <span class="n">good_index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">weights</span> <span class="o">&gt;=</span> <span class="n">weight_threshold</span><span class="p">)[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="c1"># compute number of identified outliers</span>
+    <span class="n">n_outliers</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">residuals</span><span class="p">)</span> <span class="o">-</span> <span class="nb">len</span><span class="p">(</span><span class="n">good_index</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">weights</span><span class="p">,</span> <span class="n">n_outliers</span><span class="p">,</span> <span class="n">good_index</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, European Space Agency (ESA).</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

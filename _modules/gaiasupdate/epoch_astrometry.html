@@ -1,0 +1,1277 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>gaiasupdate.epoch_astrometry &mdash; gaiasupdate 0.1.dev1+g0c25c91a1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=6982ef98"></script>
+      <script src="../../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            gaiasupdate
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../installation.html">Installation</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Usage</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../tools.html">Tools</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../supdate_output_params.html">Output parameters</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Package documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../modules.html">gaiasupdate</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Other</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../../citation_license.html">Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../../citation_license.html#license">License</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">gaiasupdate</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">gaiasupdate.epoch_astrometry</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for gaiasupdate.epoch_astrometry</h1><div class="highlight"><pre>
+<span></span><span class="c1">#   Copyright (c) European Space Agency, 2026.</span>
+<span class="c1">#</span>
+<span class="c1">#   This file is subject to the terms and conditions defined in file &quot;LICENSE.txt&quot;, which</span>
+<span class="c1">#   is part of this source code package. No part of the package, including</span>
+<span class="c1">#   this file, may be copied, modified, propagated, or distributed except according to</span>
+<span class="c1">#   the terms contained in the file &quot;LICENSE.txt&quot;.</span>
+
+<span class="sd">&quot;&quot;&quot;Module to facilitate the handling of Gaia Epoch Astrometry.&quot;&quot;&quot;</span>
+
+<span class="n">__author__</span> <span class="o">=</span> <span class="s2">&quot;Johannes Sahlmann&quot;</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">collections</span><span class="w"> </span><span class="kn">import</span> <span class="n">OrderedDict</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">numpy.linalg</span><span class="w"> </span><span class="kn">import</span> <span class="n">LinAlgError</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">logging</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">astropy.units</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">u</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">astroquery.gaia</span><span class="w"> </span><span class="kn">import</span> <span class="n">GaiaClass</span><span class="p">,</span> <span class="n">Gaia</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">pandas.api.types</span><span class="w"> </span><span class="kn">import</span> <span class="n">is_list_like</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">.constants</span><span class="w"> </span><span class="kn">import</span> <span class="n">TCB_REFERENCE_EPOCH</span><span class="p">,</span> <span class="n">DR4_REFERENCE_EPOCH</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">.solver</span><span class="w"> </span><span class="kn">import</span> <span class="n">DesignEquation</span>
+
+<span class="kn">from</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="kn">import</span> <span class="n">nan</span> <span class="k">as</span> <span class="n">NaN</span>
+<span class="n">false</span> <span class="o">=</span> <span class="kc">False</span>
+<span class="n">true</span> <span class="o">=</span> <span class="kc">True</span>
+<span class="n">mas_to_rad</span> <span class="o">=</span> <span class="n">u</span><span class="o">.</span><span class="n">milliarcsecond</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">rad</span><span class="p">)</span>
+
+
+<div class="viewcode-block" id="GaiaCentroidDataFrame">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaCentroidDataFrame">[docs]</a>
+<span class="nd">@pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">extensions</span><span class="o">.</span><span class="n">register_dataframe_accessor</span><span class="p">(</span><span class="s2">&quot;gaiacentroid&quot;</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">GaiaCentroidDataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extension for Gaia epoch astrometry data from centroids.&quot;&quot;&quot;</span>
+
+    <span class="n">_validation_columns</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">_blended_column</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">pandas_obj</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Set _obj attribute and validate input dataframe.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        pandas_obj: pandas dataframe</span>
+<span class="sd">            Dataframe containing epoch astrometry data and centroids.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span> <span class="o">=</span> <span class="n">pandas_obj</span>
+        <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;units&#39;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">key</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">attrs</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">attrs</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_validate</span><span class="p">(</span><span class="n">pandas_obj</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_validation_columns</span><span class="p">)</span>
+
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_validate</span><span class="p">(</span><span class="n">obj</span><span class="p">,</span> <span class="n">columns</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Verify the necessary columns are present.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        obj: pandas dataframe</span>
+<span class="sd">            Dataframe.</span>
+<span class="sd">        columns: list</span>
+<span class="sd">            List of columns to be present in &#39;obj&#39;.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">missing_columns</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">setdiff1d</span><span class="p">(</span><span class="n">columns</span><span class="p">,</span> <span class="n">obj</span><span class="o">.</span><span class="n">columns</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">missing_columns</span><span class="p">)</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">AttributeError</span><span class="p">(</span><span class="s1">&#39;DataFrame must have </span><span class="si">{}</span><span class="s1"> columns.</span><span class="se">\n</span><span class="s1">It has </span><span class="si">{}</span><span class="s1">&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="n">missing_columns</span><span class="p">,</span> <span class="n">obj</span><span class="o">.</span><span class="n">columns</span><span class="p">))</span>
+
+<div class="viewcode-block" id="GaiaCentroidDataFrame.fix_blended_column">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaCentroidDataFrame.fix_blended_column">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">fix_blended_column</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Fix the &#39;blended&#39; column, filling it with NaN and set as float type.&quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">[</span><span class="s1">&#39;blended&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_blended_column</span><span class="p">]</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">nan</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">astype</span><span class="p">({</span><span class="bp">self</span><span class="o">.</span><span class="n">_blended_column</span><span class="p">:</span> <span class="nb">float</span><span class="p">})</span></div>
+
+
+<div class="viewcode-block" id="GaiaCentroidDataFrame.explode_ccdlevel_columns">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaCentroidDataFrame.explode_ccdlevel_columns">[docs]</a>
+    <span class="nd">@staticmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">explode_ccdlevel_columns</span><span class="p">(</span><span class="n">df_input</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert the columns holding arrays of CCD-transit information into dataframe rows, also fixing issues \</span>
+<span class="sd">        in certain columns.</span>
+
+<span class="sd">        Note</span>
+<span class="sd">        ----</span>
+<span class="sd">        A new column &#39;component_index&#39; is introduced to keep track of the device where the CCD transit was recorded.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        df_input: pandas dataframe</span>
+<span class="sd">            Dataframe containing GaiaCentroidDataFrame.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Pandas dataframe</span>
+<span class="sd">            Dataframe with rows exploded to hold one device data per row.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">df</span> <span class="o">=</span> <span class="n">df_input</span>
+        <span class="c1"># to remove column &#39;centroid_pos_ac&#39; or any column with all rows set to NaN</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">dropna</span><span class="p">(</span><span class="n">axis</span><span class="o">=</span><span class="s1">&#39;columns&#39;</span><span class="p">,</span> <span class="n">how</span><span class="o">=</span><span class="s1">&#39;all&#39;</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="c1"># identify columns that hold arrays</span>
+        <span class="n">array_colums</span> <span class="o">=</span> <span class="p">[</span><span class="n">c</span> <span class="k">for</span> <span class="n">c</span><span class="p">,</span> <span class="n">d</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">dtypes</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="n">d</span> <span class="o">==</span> <span class="s1">&#39;object&#39;</span><span class="p">]</span>
+
+        <span class="n">problematic_columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;filename&#39;</span><span class="p">,</span> <span class="s1">&#39;blended&#39;</span><span class="p">,</span> <span class="s1">&#39;multipeak&#39;</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">problematic_columns</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">array_colums</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Dataframe contains column &#39;</span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2">&#39;, which can cause problems </span><span class="se">\</span>
+<span class="s2">                when exploding the array columns. Removing it.&quot;</span><span class="p">)</span>
+                <span class="c1"># column &#39;multipeak&#39; is in fact a Boolean</span>
+                <span class="k">if</span> <span class="n">col</span> <span class="o">==</span> <span class="s1">&#39;multipeak&#39;</span><span class="p">:</span>
+                    <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="nb">bool</span><span class="p">)</span>
+                <span class="k">else</span><span class="p">:</span>
+                    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="n">col</span><span class="p">])</span>
+                <span class="n">array_colums</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">col</span><span class="p">)</span>
+
+        <span class="c1"># add component index (0 = SM1/SM2, 1=AF1, 2=AF2, etc.) and get time column to check whether the data is SIF</span>
+        <span class="n">column_to_test_size</span> <span class="o">=</span> <span class="p">[</span><span class="n">k</span> <span class="k">for</span> <span class="n">k</span><span class="p">,</span> <span class="n">v</span> <span class="ow">in</span> <span class="n">df</span><span class="o">.</span><span class="n">items</span><span class="p">()</span> <span class="k">if</span> <span class="nb">all</span><span class="p">(</span><span class="n">x</span> <span class="ow">in</span> <span class="n">k</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span> <span class="k">for</span> <span class="n">x</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;time&#39;</span><span class="p">,</span> <span class="s1">&#39;tcb&#39;</span><span class="p">])][</span><span class="mi">0</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="nb">type</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">column_to_test_size</span><span class="p">])</span> <span class="ow">is</span> <span class="nb">str</span><span class="p">:</span>
+            <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="n">array_colums</span><span class="p">:</span>
+                <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">list</span><span class="p">(</span><span class="nb">eval</span><span class="p">(</span><span class="n">x</span><span class="p">)))</span>
+
+        <span class="n">component_index_len</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">column_to_test_size</span><span class="p">])</span>
+        <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;component_index&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">tile</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">component_index_len</span><span class="p">),</span> <span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">df</span><span class="p">),</span> <span class="mi">1</span><span class="p">))</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s2">&quot;Exploding the dataframe&#39;s CCD-level columns.&quot;</span><span class="p">)</span>
+        <span class="n">df_exploded</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">explode</span><span class="p">(</span><span class="n">array_colums</span> <span class="o">+</span> <span class="p">[</span><span class="s1">&#39;component_index&#39;</span><span class="p">])</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">df_exploded</span></div>
+
+
+<div class="viewcode-block" id="GaiaCentroidDataFrame.check_if_is_exploded">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaCentroidDataFrame.check_if_is_exploded">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">check_if_is_exploded</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epoch_data</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Check whether the dataframe is already exploded.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        input: pandas dataframe</span>
+<span class="sd">            Dataframe to check whether it is exploded.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Boolean</span>
+<span class="sd">            True or False if the dataframe is exploded or not.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">check_if_list_like</span> <span class="o">=</span> <span class="n">is_list_like</span><span class="p">(</span><span class="n">epoch_data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_time_column</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">check_if_list_like</span><span class="p">:</span>
+            <span class="n">check_if_is_exploded</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">epoch_data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_time_column</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">check_if_is_exploded</span> <span class="o">&gt;</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">is_exploded</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">is_exploded</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">epoch_data</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_time_column</span><span class="p">]</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="nb">str</span><span class="p">):</span>
+                <span class="n">is_exploded</span> <span class="o">=</span> <span class="kc">False</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">is_exploded</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">return</span> <span class="n">is_exploded</span></div>
+
+
+<div class="viewcode-block" id="GaiaCentroidDataFrame.filter_on_used_by_agis">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaCentroidDataFrame.filter_on_used_by_agis">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">filter_on_used_by_agis</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">scan_direction</span><span class="o">=</span><span class="s1">&#39;al&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Filter out rows containing observations not used by AGIS.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        scan_direction: str, optional</span>
+<span class="sd">            Scan direction to use, either &#39;al&#39; (along scan) or &#39;ac&#39; (across scan). Default: &#39;al&#39;.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Pandas dataframe</span>
+<span class="sd">            Dataframe filtered following column mask &#39;used_by_agis_al&#39; or &#39;used_by_agis_ac&#39;.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">scan_direction</span> <span class="o">==</span> <span class="s1">&#39;al&#39;</span><span class="p">:</span>
+            <span class="n">filter_column</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_used_by_agis_al_column</span>
+        <span class="k">elif</span> <span class="n">scan_direction</span> <span class="o">==</span> <span class="s1">&#39;ac&#39;</span><span class="p">:</span>
+            <span class="n">filter_column</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_used_by_agis_ac_column</span>
+
+        <span class="n">index_keep</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">[</span><span class="sa">f</span><span class="s1">&#39;</span><span class="si">{</span><span class="n">filter_column</span><span class="si">}</span><span class="s1">&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="kc">True</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Filter on </span><span class="si">{</span><span class="n">filter_column</span><span class="si">}</span><span class="s1">==True removed </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">index_keep</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="si">}</span><span class="s1"> entries.&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">[</span><span class="n">index_keep</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GaiaCentroidDataFrame.filter_on_multipeak">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaCentroidDataFrame.filter_on_multipeak">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">filter_on_multipeak</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Filter out rows where &#39;multipeak&#39; column is True.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Pandas dataframe</span>
+<span class="sd">            Dataframe without any entry with &#39;multipeak&#39; column set to True.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">index_keep</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">[</span><span class="s1">&#39;multipeak&#39;</span><span class="p">]</span> <span class="o">==</span> <span class="kc">False</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Filter on multipeak==False removed </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">index_keep</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="si">}</span><span class="s1"> entries.&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">[</span><span class="n">index_keep</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GaiaCentroidDataFrame.filter_on_ccdprocflags">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaCentroidDataFrame.filter_on_ccdprocflags">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">filter_on_ccdprocflags</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">flags_to_keep</span><span class="p">:</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Filter out rows where &#39;ccdprocflags&#39; column values are in argument list &#39;flags_to_keep&#39;.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        flags_to_keep: narray</span>
+<span class="sd">           List of values accepted in the &#39;ccdprocflags&#39; column.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Pandas dataframe</span>
+<span class="sd">            Dataframe without any entry with &#39;ccdprocflag&#39; value in the list &#39;flags_to_keep&#39;.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">index_keep</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">[</span><span class="s1">&#39;ccdProcFlags&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">isin</span><span class="p">(</span><span class="n">flags_to_keep</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Filter on ccdProcFlags.isin(</span><span class="si">{</span><span class="n">flags_to_keep</span><span class="si">}</span><span class="s1">) removed </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">index_keep</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="si">}</span><span class="s1"> entries.&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">[</span><span class="n">index_keep</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GaiaCentroidDataFrame.filter_null_from_column">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaCentroidDataFrame.filter_null_from_column">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">filter_null_from_column</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">column</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Filter out rows where the specified &#39;column&#39; contains nulls.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        column: str</span>
+<span class="sd">            Column name to be filtered.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Pandas dataframe</span>
+<span class="sd">            Dataframe without any rows where &#39;column&#39; contains null entries.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">index_keep</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">[</span><span class="n">column</span><span class="p">]</span><span class="o">.</span><span class="n">isnull</span><span class="p">()</span> <span class="o">==</span> <span class="kc">False</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Filter on column </span><span class="si">{</span><span class="n">column</span><span class="si">}</span><span class="s1">!=null removed </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">index_keep</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="si">}</span><span class="s1"> entries.&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">[</span><span class="n">index_keep</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GaiaCentroidDataFrame.filter_out_skymapper">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaCentroidDataFrame.filter_out_skymapper">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">filter_out_skymapper</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Filter out rows corresponding to SkyMapper (SM) data.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Pandas dataframe</span>
+<span class="sd">            Dataframe without any SkyMapper data.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">index_keep</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">[</span><span class="s1">&#39;component_index&#39;</span><span class="p">]</span> <span class="o">!=</span> <span class="mi">0</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Filter on component_index!=0 removed </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="n">index_keep</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="si">}</span><span class="s1"> SM entries.&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">[</span><span class="n">index_keep</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GaiaCentroidDataFrame.filter_by_query">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaCentroidDataFrame.filter_by_query">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">filter_by_query</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">query</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Filter out the dataframe a string &#39;query&#39;.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        query: str</span>
+<span class="sd">            String containing a query to filter data in the dataframe.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Pandas dataframe</span>
+<span class="sd">            Dataframe filtered using the &#39;query&#39; argument.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">df_filtered</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="n">query</span><span class="p">)</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s1">&#39;Filter using </span><span class="si">{</span><span class="n">query</span><span class="si">}</span><span class="s1"> removed </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">)</span><span class="w"> </span><span class="o">-</span><span class="w"> </span><span class="nb">len</span><span class="p">(</span><span class="n">df_filtered</span><span class="p">)</span><span class="si">}</span><span class="s1"> entries.&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">df_filtered</span></div>
+
+
+<div class="viewcode-block" id="GaiaCentroidDataFrame.set_dtypes_for_exploded_columns">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaCentroidDataFrame.set_dtypes_for_exploded_columns">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_dtypes_for_exploded_columns</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">column_dtypes</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;After exploding object-dtype columns their dtype needs to be set explicitly.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        column_types: dict</span>
+<span class="sd">            Dictionary of key/value wich corresponds to column/type.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Pandas dataframe</span>
+<span class="sd">            Dataframe containing the columns/types as defined in &#39;column_types&#39; argument.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="n">column_dtypes</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GaiaCentroidDataFrame.set_relative_time">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaCentroidDataFrame.set_relative_time">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_relative_time</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Set new columns for relative time in years and days, including the barycentric correction.</span>
+
+<span class="sd">        Note</span>
+<span class="sd">        ----</span>
+<span class="sd">        GAIA-C3-TN-LU-LL-061 available at `Public DPAC documents &lt;https://www.cosmos.esa.int/web/gaia/public-dpac-documents&gt;`__.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Using reference epoch: </span><span class="si">{</span><span class="bp">self</span><span class="o">.</span><span class="n">_reference_epoch</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_relative_time_column_year</span><span class="p">]</span> <span class="o">=</span> <span class="n">TCB_REFERENCE_EPOCH</span><span class="o">.</span><span class="n">jyear</span> <span class="o">+</span> \
+            <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_time_column</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">nanosecond</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">year</span><span class="p">))</span> \
+            <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_time_barycentric_correction_column</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">nanosecond</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">year</span><span class="p">))</span>\
+            <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">_reference_epoch</span><span class="o">.</span><span class="n">jyear</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_relative_time_column_day</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_relative_time_column_year</span><span class="p">]</span> <span class="o">*</span> <span class="n">u</span><span class="o">.</span><span class="n">year</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">u</span><span class="o">.</span><span class="n">day</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GaiaCentroidDataFrame.set_scan_angle_derived_columns">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaCentroidDataFrame.set_scan_angle_derived_columns">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">set_scan_angle_derived_columns</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Add new columns to dataframe that correspond to scan-angle coefficients.&quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="s1">&#39;sin_theta&#39;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="s1">&#39;Scan angle columns already exist. Skipping.&#39;</span><span class="p">)</span>
+            <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_relative_time_column_year</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Objecty attribute `_relative_time_column_year` is not set.&#39;</span><span class="p">)</span>
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scan_angle_column_deg</span> <span class="ow">is</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Objecty attribute `_scan_angle_column_deg` is not set.&#39;</span><span class="p">)</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;sin_theta&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">sin</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scan_angle_column_deg</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;cos_theta&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">cos</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">deg2rad</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_scan_angle_column_deg</span><span class="p">]))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;sin_theta_time&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;sin_theta&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_relative_time_column_year</span><span class="p">]</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;cos_theta_time&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;cos_theta&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_relative_time_column_year</span><span class="p">]</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span></div>
+
+
+<div class="viewcode-block" id="GaiaCentroidDataFrame.sort_by_column">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaCentroidDataFrame.sort_by_column">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">sort_by_column</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">column_name</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Sort the epoch data dataframe by the specified column.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        column_name: str</span>
+<span class="sd">            Sort dataframe by &#39;column_name&#39; in ascending order.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">sort_values</span><span class="p">(</span><span class="n">column_name</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_obj</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GaiaCentroidDataFrame.get_design_equation_parameters">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaCentroidDataFrame.get_design_equation_parameters">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_design_equation_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="s1">&#39;6p_constrained_colour&#39;</span><span class="p">,</span> <span class="n">scan_direction</span><span class="o">=</span><span class="s1">&#39;Al&#39;</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">OrderedDict</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute and return the design equation parameters.</span>
+
+<span class="sd">        s : pandas dataframe with the lpcs of the source s</span>
+
+<span class="sd">        t0 : the reference epoch in obmt ns (see obmt decodeur)</span>
+
+<span class="sd">        withDeltat : if true use the lpc extra deltat time to reference epoch in year</span>
+
+<span class="sd">        return : D,h the design matrix [alpha0,delta0,varpi,mualphastar,mudelta] and right hand side [w]</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        model: str</span>
+<span class="sd">            Model corresponding to the number of astrometric parameters to solve. Default: &#39;5p_single_source&#39;.</span>
+<span class="sd">        scan_direction: str, optional</span>
+<span class="sd">            Scan direction to use, either &#39;al&#39; (along scan) or &#39;ac&#39; (across scan). Default: &#39;al&#39;.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        OrderedDict</span>
+<span class="sd">            Ordered dictionary containing the astrometric parameters computed.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">scan_direction</span> <span class="o">==</span> <span class="s1">&#39;Al&#39;</span><span class="p">:</span>
+            <span class="n">columns_5p_single_source</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;sin_theta&#39;</span><span class="p">,</span> <span class="s1">&#39;cos_theta&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parallax_factor_column_al</span><span class="p">,</span> <span class="s1">&#39;sin_theta_time&#39;</span><span class="p">,</span>
+                                        <span class="s1">&#39;cos_theta_time&#39;</span><span class="p">]</span>
+            <span class="n">auxiliary_columns</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_centroid_position_column_al</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_centroid_position_error_column_al</span><span class="p">,</span>
+                                 <span class="bp">self</span><span class="o">.</span><span class="n">_time_column</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_relative_time_column_year</span><span class="p">]</span>
+
+        <span class="n">result</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+
+        <span class="k">if</span> <span class="n">model</span> <span class="o">==</span> <span class="s1">&#39;3p_single_source_without_offsets&#39;</span><span class="p">:</span>
+            <span class="n">columns_3p_single_source_without_offsets</span> <span class="o">=</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_parallax_factor_column_al</span><span class="p">,</span> <span class="s1">&#39;sin_theta_time&#39;</span><span class="p">,</span> <span class="s1">&#39;cos_theta_time&#39;</span><span class="p">]</span>
+            <span class="n">columns_to_extract</span> <span class="o">=</span> <span class="n">columns_3p_single_source_without_offsets</span> <span class="o">+</span> <span class="n">auxiliary_columns</span>
+            <span class="n">lpc0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">set_scan_angle_derived_columns</span><span class="p">()[</span><span class="n">columns_to_extract</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+            <span class="n">selected_columns</span> <span class="o">=</span> <span class="n">columns_3p_single_source_without_offsets</span>
+            <span class="n">lpc</span> <span class="o">=</span> <span class="n">lpc0</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+
+        <span class="k">elif</span> <span class="n">model</span> <span class="o">==</span> <span class="s1">&#39;5p_single_source&#39;</span><span class="p">:</span>
+            <span class="n">columns_to_extract</span> <span class="o">=</span> <span class="n">columns_5p_single_source</span> <span class="o">+</span> <span class="n">auxiliary_columns</span>
+            <span class="n">lpc0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">set_scan_angle_derived_columns</span><span class="p">()[</span><span class="n">columns_to_extract</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+            <span class="n">lpc</span> <span class="o">=</span> <span class="n">lpc0</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">selected_columns</span> <span class="o">=</span> <span class="n">columns_5p_single_source</span>
+
+        <span class="k">elif</span> <span class="n">model</span> <span class="o">==</span> <span class="s1">&#39;6p_constrained_colour&#39;</span><span class="p">:</span>
+            <span class="n">columns_to_extract</span> <span class="o">=</span> <span class="n">columns_5p_single_source</span> <span class="o">+</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_colour_factor_column_al</span><span class="p">]</span> <span class="o">+</span> <span class="n">auxiliary_columns</span>
+            <span class="n">lpc0</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">set_scan_angle_derived_columns</span><span class="p">()[</span><span class="n">columns_to_extract</span><span class="p">]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span>
+            <span class="n">lpc</span> <span class="o">=</span> <span class="n">lpc0</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+            <span class="n">selected_columns</span> <span class="o">=</span> <span class="n">columns_5p_single_source</span> <span class="o">+</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_colour_factor_column_al</span><span class="p">]</span>
+
+        <span class="n">result</span><span class="p">[</span><span class="s1">&#39;design_matrix_coefficients&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lpc</span><span class="p">[</span><span class="n">selected_columns</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+        <span class="n">result</span><span class="p">[</span><span class="s1">&#39;normal_matrix_column_names&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">selected_columns</span>
+        <span class="n">result</span><span class="p">[</span><span class="s1">&#39;dependent_variable&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lpc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_centroid_position_column_al</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">result</span><span class="p">[</span><span class="s1">&#39;dependent_variable_error&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lpc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_centroid_position_error_column_al</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+        <span class="n">result</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span>
+        <span class="n">result</span><span class="p">[</span><span class="s1">&#39;timestamps&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lpc</span><span class="p">[[</span><span class="bp">self</span><span class="o">.</span><span class="n">_time_column</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_relative_time_column_year</span><span class="p">]]</span><span class="o">.</span><span class="n">reset_index</span><span class="p">(</span><span class="n">drop</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">result</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="EpochAstrometryDataFrameCu9">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.EpochAstrometryDataFrameCu9">[docs]</a>
+<span class="nd">@pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">extensions</span><span class="o">.</span><span class="n">register_dataframe_accessor</span><span class="p">(</span><span class="s2">&quot;epochastrometrycu9&quot;</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">EpochAstrometryDataFrameCu9</span><span class="p">(</span><span class="n">GaiaCentroidDataFrame</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extension for Epoch Astrometric Data in CU9 format (internal use).&quot;&quot;&quot;</span>
+
+    <span class="n">_validation_columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;obsTimeBaryCorr&#39;</span><span class="p">,</span> <span class="s1">&#39;centroidPosAl&#39;</span><span class="p">,</span> <span class="s1">&#39;centroidPosErrorAl&#39;</span><span class="p">]</span>
+
+    <span class="n">_scan_angle_column</span> <span class="o">=</span> <span class="s1">&#39;scanPosAngle&#39;</span>
+    <span class="n">_scan_angle_column_deg</span> <span class="o">=</span> <span class="s1">&#39;scanPosAngle&#39;</span>
+    <span class="n">_parallax_factor_column_al</span> <span class="o">=</span> <span class="s1">&#39;parallaxFactorAl&#39;</span>
+    <span class="n">_colour_factor_column_al</span> <span class="o">=</span> <span class="s1">&#39;colourFactorAl&#39;</span>
+    <span class="n">_centroid_position_column_al</span> <span class="o">=</span> <span class="s1">&#39;centroidPosAl&#39;</span>
+    <span class="n">_centroid_position_error_column_al</span> <span class="o">=</span> <span class="s1">&#39;centroidPosErrorAl&#39;</span>
+    <span class="n">_time_column</span> <span class="o">=</span> <span class="s1">&#39;obsTimeTcb&#39;</span>
+    <span class="n">_time_barycentric_correction_column</span> <span class="o">=</span> <span class="s1">&#39;obsTimeBaryCorr&#39;</span>
+    <span class="n">_used_by_agis_al_column</span> <span class="o">=</span> <span class="s1">&#39;usedByAgisAl&#39;</span>
+    <span class="n">_used_by_agis_ac_column</span> <span class="o">=</span> <span class="s1">&#39;usedByAgisAc&#39;</span>
+    <span class="n">_blended_column</span> <span class="o">=</span> <span class="s1">&#39;blended&#39;</span>
+    <span class="n">_agis_source_excess_noise_column</span> <span class="o">=</span> <span class="s1">&#39;agisSourceExcessNoise&#39;</span>
+    <span class="n">_relative_time_column_year</span> <span class="o">=</span> <span class="s1">&#39;relative_time_year&#39;</span>
+    <span class="n">_relative_time_column_day</span> <span class="o">=</span> <span class="s1">&#39;relative_time_day&#39;</span>
+    <span class="n">_reference_epoch</span> <span class="o">=</span> <span class="n">DR4_REFERENCE_EPOCH</span></div>
+
+
+
+<div class="viewcode-block" id="EpochAstrometryDataFrameArchive">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.EpochAstrometryDataFrameArchive">[docs]</a>
+<span class="nd">@pd</span><span class="o">.</span><span class="n">api</span><span class="o">.</span><span class="n">extensions</span><span class="o">.</span><span class="n">register_dataframe_accessor</span><span class="p">(</span><span class="s2">&quot;epochastrometryarchive&quot;</span><span class="p">)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">EpochAstrometryDataFrameArchive</span><span class="p">(</span><span class="n">GaiaCentroidDataFrame</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Extension for Epoch Astrometric Data in public Gaia Archive format.&quot;&quot;&quot;</span>
+
+    <span class="n">_validation_columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;obs_time_bary_corr&#39;</span><span class="p">,</span> <span class="s1">&#39;centroid_pos_al&#39;</span><span class="p">,</span> <span class="s1">&#39;centroid_pos_error_al&#39;</span><span class="p">]</span>
+
+    <span class="n">_scan_angle_column</span> <span class="o">=</span> <span class="s1">&#39;scan_pos_angle&#39;</span>
+    <span class="n">_scan_angle_column_deg</span> <span class="o">=</span> <span class="s1">&#39;scan_pos_angle&#39;</span>
+    <span class="n">_parallax_factor_column_al</span> <span class="o">=</span> <span class="s1">&#39;parallax_factor_al&#39;</span>
+    <span class="n">_colour_factor_column_al</span> <span class="o">=</span> <span class="s1">&#39;colour_factor_al&#39;</span>
+    <span class="n">_centroid_position_column_al</span> <span class="o">=</span> <span class="s1">&#39;centroid_pos_al&#39;</span>
+    <span class="n">_centroid_position_error_column_al</span> <span class="o">=</span> <span class="s1">&#39;centroid_pos_error_al&#39;</span>
+    <span class="n">_time_column</span> <span class="o">=</span> <span class="s1">&#39;obs_time_tcb&#39;</span>
+    <span class="n">_ipd_error_column_al</span> <span class="o">=</span> <span class="s1">&#39;ipd_error_al&#39;</span>
+    <span class="n">_time_barycentric_correction_column</span> <span class="o">=</span> <span class="s1">&#39;obs_time_bary_corr&#39;</span>
+    <span class="n">_used_by_agis_al_column</span> <span class="o">=</span> <span class="s1">&#39;used_by_agis_al&#39;</span>
+    <span class="n">_used_by_agis_ac_column</span> <span class="o">=</span> <span class="s1">&#39;used_by_agis_ac&#39;</span>
+    <span class="n">_blended_column</span> <span class="o">=</span> <span class="s1">&#39;blended&#39;</span>
+    <span class="n">_agis_source_excess_noise_column</span> <span class="o">=</span> <span class="s1">&#39;agis_source_excess_noise&#39;</span>
+    <span class="n">_relative_time_column_year</span> <span class="o">=</span> <span class="s1">&#39;relative_time_year&#39;</span>
+    <span class="n">_relative_time_column_day</span> <span class="o">=</span> <span class="s1">&#39;relative_time_day&#39;</span>
+    <span class="n">_reference_epoch</span> <span class="o">=</span> <span class="n">DR4_REFERENCE_EPOCH</span></div>
+
+
+
+<div class="viewcode-block" id="GaiaEpochAstrometry">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaEpochAstrometry">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">GaiaEpochAstrometry</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class for Gaia Epoch Astrometric Data.&quot;&quot;&quot;</span>
+
+    <span class="n">_data_is_exploded</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_time_column</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_scan_angle_column</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_centroid_position_column_al</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_centroid_position_error_column_al</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_ipd_error_column_al</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_agis_source_excess_noise_column</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">_colour_factor_column_al</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="n">n_filtered_ccd_transits</span> <span class="o">=</span> <span class="kc">None</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epoch_data</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">,</span> <span class="n">source_id</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">explode</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">is_exploded</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Initialise GaiaEpochAstrometry instance.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        epoch_data: pandas dataframe</span>
+<span class="sd">            Dataframe containing epoch astrometry data.</span>
+<span class="sd">        source_id: long int, optional</span>
+<span class="sd">            Gaia identifier of the source being queried.</span>
+<span class="sd">        explode: boolean, optional</span>
+<span class="sd">            Whether the dataframe has to be exploded by device per row. Default: True</span>
+<span class="sd">        is_exploded: boolean, optional</span>
+<span class="sd">            Whether the dataframe is already exploded by device per row. Default: False</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="c1"># Check whether the dataframe is already exploded by device per row</span>
+        <span class="n">is_exploded</span> <span class="o">=</span> <span class="n">GaiaCentroidDataFrame</span><span class="o">.</span><span class="n">check_if_is_exploded</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">epoch_data</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">_data_is_exploded</span> <span class="o">=</span> <span class="n">is_exploded</span>
+
+        <span class="k">if</span> <span class="n">explode</span> <span class="ow">and</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_data_is_exploded</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span> <span class="o">=</span> <span class="n">GaiaCentroidDataFrame</span><span class="o">.</span><span class="n">explode_ccdlevel_columns</span><span class="p">(</span><span class="n">epoch_data</span><span class="o">.</span><span class="n">copy</span><span class="p">())</span>
+            <span class="c1"># filter null entries from time column, otherwise data type cannot be set correctly</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span><span class="o">.</span><span class="n">gaiacentroid</span><span class="o">.</span><span class="n">filter_null_from_column</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_time_column</span><span class="p">)</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span><span class="o">.</span><span class="n">gaiacentroid</span><span class="o">.</span><span class="n">set_dtypes_for_exploded_columns</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_get_column_dtypes</span><span class="p">())</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">_data_is_exploded</span> <span class="o">=</span> <span class="kc">True</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span> <span class="o">=</span> <span class="n">epoch_data</span>
+
+        <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">_data_is_exploded</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">n_original_ccd_transits</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">source_id</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">source_id</span> <span class="o">=</span> <span class="n">source_id</span>
+
+<div class="viewcode-block" id="GaiaEpochAstrometry.from_dataframe">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaEpochAstrometry.from_dataframe">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_dataframe</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Extract data from dataframe and return astropy table.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        df: pandas dataframe</span>
+<span class="sd">            Data in pandas dataframe format.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Astropy table</span>
+<span class="sd">            Astropy table containing the dataframe data.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">_get_column_dtypes</span><span class="p">(</span><span class="bp">cls</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Get the column datatypes of the columns that were exploded.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        cls: astropy table</span>
+<span class="sd">            Astropy table containing the dataframe data.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            Dictionary of key/values wich corresponds to column/type.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">column_dtypes</span> <span class="o">=</span> <span class="p">{</span><span class="bp">cls</span><span class="o">.</span><span class="n">_time_column</span><span class="p">:</span> <span class="s1">&#39;int64&#39;</span><span class="p">,</span>  <span class="c1"># Java Long</span>
+                         <span class="bp">cls</span><span class="o">.</span><span class="n">_scan_angle_column</span><span class="p">:</span> <span class="s1">&#39;float64&#39;</span><span class="p">,</span>  <span class="c1"># Java double</span>
+                         <span class="bp">cls</span><span class="o">.</span><span class="n">_centroid_position_column_al</span><span class="p">:</span> <span class="s1">&#39;float64&#39;</span><span class="p">,</span>  <span class="c1"># Java double</span>
+                         <span class="bp">cls</span><span class="o">.</span><span class="n">_centroid_position_error_column_al</span><span class="p">:</span> <span class="s1">&#39;float&#39;</span><span class="p">,</span>  <span class="c1"># Java float</span>
+                         <span class="bp">cls</span><span class="o">.</span><span class="n">_ipd_error_column_al</span><span class="p">:</span> <span class="s1">&#39;float&#39;</span><span class="p">,</span>  <span class="c1"># Java float</span>
+                         <span class="bp">cls</span><span class="o">.</span><span class="n">_colour_factor_column_al</span><span class="p">:</span> <span class="s1">&#39;float&#39;</span><span class="p">,</span>  <span class="c1"># Java float</span>
+                         <span class="bp">cls</span><span class="o">.</span><span class="n">_ccd_proc_flags_column</span><span class="p">:</span> <span class="s1">&#39;int16&#39;</span><span class="p">,</span>
+                         <span class="s1">&#39;component_index&#39;</span><span class="p">:</span> <span class="s1">&#39;int8&#39;</span><span class="p">,</span>
+                         <span class="p">}</span>
+        <span class="k">return</span> <span class="n">column_dtypes</span></div>
+
+
+
+<div class="viewcode-block" id="GaiaEpochAstrometryCu9">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaEpochAstrometryCu9">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">GaiaEpochAstrometryCu9</span><span class="p">(</span><span class="n">GaiaEpochAstrometry</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class for Gaia Epoch Astrometric Data in MDB format.&quot;&quot;&quot;</span>
+
+    <span class="n">_source_id_field</span> <span class="o">=</span> <span class="s1">&#39;sourceId&#39;</span>
+    <span class="n">_transit_id_field</span> <span class="o">=</span> <span class="s1">&#39;transitId&#39;</span>
+    <span class="n">_time_barycentric_correction_column</span> <span class="o">=</span> <span class="s1">&#39;obsTimeBaryCorr&#39;</span>
+    <span class="n">_parallax_factor_column_al</span> <span class="o">=</span> <span class="s1">&#39;parallaxFactorAl&#39;</span>
+
+    <span class="n">_time_column</span> <span class="o">=</span> <span class="s1">&#39;obsTimeTcb&#39;</span>
+    <span class="n">_scan_angle_column</span> <span class="o">=</span> <span class="s1">&#39;scanPosAngle&#39;</span>
+    <span class="n">_centroid_position_column_al</span> <span class="o">=</span> <span class="s1">&#39;centroidPosAl&#39;</span>
+    <span class="n">_centroid_position_error_column_al</span> <span class="o">=</span> <span class="s1">&#39;centroidPosErrorAl&#39;</span>
+    <span class="n">_colour_factor_column_al</span> <span class="o">=</span> <span class="s1">&#39;colourFactorAl&#39;</span>
+    <span class="n">_ipd_error_column_al</span> <span class="o">=</span> <span class="s1">&#39;ipdErrorAl&#39;</span>
+    <span class="n">_ccd_proc_flags_column</span> <span class="o">=</span> <span class="s1">&#39;ccdProcFlags&#39;</span>  <span class="c1"># ccd_proc_flags</span>
+    <span class="n">_agis_source_excess_noise_column</span> <span class="o">=</span> <span class="s1">&#39;agisSourceExcessNoise&#39;</span>
+
+<div class="viewcode-block" id="GaiaEpochAstrometryCu9.filter_columns_for_computation">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaEpochAstrometryCu9.filter_columns_for_computation">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">filter_columns_for_computation</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Dismiss the unneeded columns during the computation.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        df: pandas dataframe</span>
+<span class="sd">            Dataframe containing data.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Pandas dataframe</span>
+<span class="sd">            Dataframe that containg only the columns needed for source update computation, the rest are dropped.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">columns</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;sourceId&#39;</span><span class="p">,</span> <span class="s1">&#39;obsTimeBaryCorr&#39;</span><span class="p">,</span> <span class="s1">&#39;centroidPosAl&#39;</span><span class="p">,</span> <span class="s1">&#39;centroidPosErrorAl&#39;</span><span class="p">]</span>
+        <span class="n">columns</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;scanPosAngle&#39;</span><span class="p">,</span> <span class="s1">&#39;parallaxFactorAl&#39;</span><span class="p">,</span> <span class="s1">&#39;colourFactorAl&#39;</span><span class="p">,</span> <span class="s1">&#39;obsTimeTcb&#39;</span><span class="p">,</span> <span class="s1">&#39;usedByAgisAl&#39;</span><span class="p">]</span>
+        <span class="n">columns</span> <span class="o">+=</span> <span class="p">[</span><span class="s1">&#39;agisSourceExcessNoise&#39;</span><span class="p">,</span> <span class="s1">&#39;ccdProcFlags&#39;</span><span class="p">,</span> <span class="s1">&#39;ipdErrorAl&#39;</span><span class="p">,</span> <span class="s1">&#39;nuEffUsedInAstrometry&#39;</span><span class="p">]</span>
+        <span class="k">return</span> <span class="n">df</span><span class="p">[</span><span class="n">columns</span><span class="p">]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span></div>
+
+
+<div class="viewcode-block" id="GaiaEpochAstrometryCu9.supdate">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaEpochAstrometryCu9.supdate">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">supdate</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">sourceid</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compute_excess_noise</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run compute_source_parameters_like_dr4 on CU9 internal format.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        df: pandas dataframe</span>
+<span class="sd">            Dataframe containing data.</span>
+<span class="sd">        source_id: long int</span>
+<span class="sd">            Gaia identifier of the source.</span>
+<span class="sd">        model: str, optional</span>
+<span class="sd">            Model corresponding to the number of astrometric parameters solve. Default: 6p_constrained_colour.</span>
+<span class="sd">        compute_excess_noise: boolean, optional</span>
+<span class="sd">            Whether to fit the excess_noise of the observation or use computed by AGIS.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            The astrometric parameters computed for the source.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">model</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="s1">&#39;6p_constrained_colour&#39;</span>
+
+        <span class="c1"># Check whether the dataframe is already exploded by device per row</span>
+        <span class="n">is_exploded</span> <span class="o">=</span> <span class="n">GaiaCentroidDataFrame</span><span class="o">.</span><span class="n">check_if_is_exploded</span><span class="p">(</span><span class="n">GaiaEpochAstrometryCu9</span><span class="p">(</span><span class="n">df</span><span class="p">),</span> <span class="n">df</span><span class="p">)</span>
+
+        <span class="n">df</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">filter_columns_for_computation</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+        <span class="n">ea_cu9_df</span> <span class="o">=</span> <span class="n">GaiaEpochAstrometryCu9</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">is_exploded</span><span class="o">=</span><span class="n">is_exploded</span><span class="p">)</span><span class="o">.</span><span class="n">epoch_data</span>
+        <span class="n">ea_df</span> <span class="o">=</span> <span class="n">ea_cu9_df</span><span class="p">[</span><span class="n">ea_cu9_df</span><span class="p">[</span><span class="n">GaiaEpochAstrometryCu9</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">is_exploded</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span><span class="o">.</span><span class="n">_source_id_field</span><span class="p">]</span> <span class="o">==</span> <span class="n">sourceid</span><span class="p">]</span>
+        <span class="n">ea_df</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s1">&#39;colourFactorAl&#39;</span><span class="p">]</span> <span class="o">*=</span> <span class="o">-</span><span class="mf">1e3</span>
+        <span class="n">ea</span> <span class="o">=</span> <span class="n">GaiaSourceEpochAstrometryCu9</span><span class="o">.</span><span class="n">from_dataframe</span><span class="p">(</span><span class="n">ea_df</span><span class="p">,</span> <span class="n">sourceid</span><span class="p">,</span> <span class="n">is_exploded</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="n">model</span> <span class="o">==</span> <span class="s1">&#39;6p_constrained_colour&#39;</span> <span class="ow">and</span> <span class="ow">not</span> <span class="n">compute_excess_noise</span><span class="p">:</span>
+            <span class="n">supdate</span> <span class="o">=</span> <span class="n">ea</span><span class="o">.</span><span class="n">compute_source_parameters_like_dr4</span><span class="p">()</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">supdate</span> <span class="o">=</span> <span class="n">ea</span><span class="o">.</span><span class="n">compute_source_parameters</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">compute_excess_noise</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">supdate</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="GaiaEpochAstrometryArchive">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaEpochAstrometryArchive">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">GaiaEpochAstrometryArchive</span><span class="p">(</span><span class="n">GaiaEpochAstrometry</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class for Gaia Epoch Astrometric Data in Gaia Archive format.&quot;&quot;&quot;</span>
+
+    <span class="n">_source_id_field</span> <span class="o">=</span> <span class="s1">&#39;source_id&#39;</span>
+    <span class="n">_transit_id_field</span> <span class="o">=</span> <span class="s1">&#39;transit_id&#39;</span>
+    <span class="n">_time_column</span> <span class="o">=</span> <span class="s1">&#39;obs_time_tcb&#39;</span>
+    <span class="n">_time_barycentric_correction_column</span> <span class="o">=</span> <span class="s1">&#39;obs_time_bary_corr&#39;</span>
+    <span class="n">_parallax_factor_column_al</span> <span class="o">=</span> <span class="s1">&#39;parallax_factor_al&#39;</span>
+    <span class="n">_colour_factor_column_al</span> <span class="o">=</span> <span class="s1">&#39;colour_factor_al&#39;</span>
+    <span class="n">_scan_angle_column</span> <span class="o">=</span> <span class="s1">&#39;scan_pos_angle&#39;</span>
+    <span class="n">_centroid_position_column_al</span> <span class="o">=</span> <span class="s1">&#39;centroid_pos_al&#39;</span>
+    <span class="n">_centroid_position_error_column_al</span> <span class="o">=</span> <span class="s1">&#39;centroid_pos_error_al&#39;</span>
+    <span class="n">_ipd_error_column_al</span> <span class="o">=</span> <span class="s1">&#39;ipd_error_al&#39;</span>
+    <span class="n">_ccd_proc_flags_column</span> <span class="o">=</span> <span class="s1">&#39;ccd_proc_flags&#39;</span>
+
+<div class="viewcode-block" id="GaiaEpochAstrometryArchive.astropy_table_to_df">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaEpochAstrometryArchive.astropy_table_to_df">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">astropy_table_to_df</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert series in astropy table in flat df.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        df: Pandas dataframe</span>
+<span class="sd">            Dataframe containing data.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Pandas dataframe</span>
+<span class="sd">            Dataframe with series from astropy flatten.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="nb">list</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">columns</span><span class="p">):</span>
+            <span class="k">if</span> <span class="s1">&#39;MaskedArray&#39;</span> <span class="ow">in</span> <span class="nb">str</span><span class="p">(</span><span class="nb">type</span><span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="n">col</span><span class="p">])):</span>
+                <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="n">col</span><span class="p">]</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">x</span><span class="o">.</span><span class="n">data</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">df</span></div>
+
+
+<div class="viewcode-block" id="GaiaEpochAstrometryArchive.archive_to_cu9">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaEpochAstrometryArchive.archive_to_cu9">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">archive_to_cu9</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">df</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Convert dataframe from Gaia Archive format to CU9 format.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        df: Pandas dataframe</span>
+<span class="sd">            Dataframe containing data in Gaia Archive format.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Pandas dataframe</span>
+<span class="sd">            Dataframe containing data in CU9 format.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">cols_archive_to_cu9</span> <span class="o">=</span> <span class="p">{</span>
+            <span class="s1">&#39;source_id&#39;</span><span class="p">:</span> <span class="s1">&#39;sourceId&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;obs_time_bary_corr&#39;</span><span class="p">:</span> <span class="s1">&#39;obsTimeBaryCorr&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;centroid_pos_al&#39;</span><span class="p">:</span> <span class="s1">&#39;centroidPosAl&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;centroid_pos_error_al&#39;</span><span class="p">:</span> <span class="s1">&#39;centroidPosErrorAl&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;scan_pos_angle&#39;</span><span class="p">:</span> <span class="s1">&#39;scanPosAngle&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;parallax_factor_al&#39;</span><span class="p">:</span> <span class="s1">&#39;parallaxFactorAl&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;colour_factor_al&#39;</span><span class="p">:</span> <span class="s1">&#39;colourFactorAl&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;obs_time_tcb&#39;</span><span class="p">:</span> <span class="s1">&#39;obsTimeTcb&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;used_by_agis_al&#39;</span><span class="p">:</span> <span class="s1">&#39;usedByAgisAl&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;agis_source_excess_noise&#39;</span><span class="p">:</span> <span class="s1">&#39;agisSourceExcessNoise&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;ccd_proc_flags&#39;</span><span class="p">:</span> <span class="s1">&#39;ccdProcFlags&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;ipd_error_al&#39;</span><span class="p">:</span> <span class="s1">&#39;ipdErrorAl&#39;</span><span class="p">,</span>
+            <span class="s1">&#39;nu_eff_used_in_astrometry&#39;</span><span class="p">:</span> <span class="s1">&#39;nuEffUsedInAstrometry&#39;</span><span class="p">,</span>
+        <span class="p">}</span>
+
+        <span class="n">df</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">astropy_table_to_df</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+        <span class="n">epoch_astrometry_cu9</span> <span class="o">=</span> <span class="n">df</span><span class="p">[</span><span class="nb">list</span><span class="p">(</span><span class="n">cols_archive_to_cu9</span><span class="o">.</span><span class="n">keys</span><span class="p">())]</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">epoch_astrometry_cu9</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="n">cols_archive_to_cu9</span><span class="p">,</span> <span class="n">inplace</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">epoch_astrometry_cu9</span></div>
+
+
+<div class="viewcode-block" id="GaiaEpochAstrometryArchive.supdate">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaEpochAstrometryArchive.supdate">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">supdate</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">sourceid</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compute_excess_noise</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Run compute_source_parameters_like_dr4 from Archive data.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        df: Pandas dataframe</span>
+<span class="sd">            Dataframe containing data in Gaia Archive format.</span>
+<span class="sd">        source_id: long int</span>
+<span class="sd">            Gaia identifier of the source.</span>
+<span class="sd">        model: str, optional</span>
+<span class="sd">            Model corresponding to the number of astrometric parameters to solve. Default: &#39;6p_constrained_colour&#39;.</span>
+<span class="sd">        compute_excess_noise: boolean, optional</span>
+<span class="sd">            Whether to fit the excess_noise of the observation or use computed by AGIS.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            The astrometric parameters computed for the source.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">model</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="s1">&#39;6p_constrained_colour&#39;</span>
+
+        <span class="n">d</span> <span class="o">=</span> <span class="bp">cls</span><span class="o">.</span><span class="n">archive_to_cu9</span><span class="p">(</span><span class="n">df</span><span class="p">)</span>
+        <span class="n">supdate</span> <span class="o">=</span> <span class="n">GaiaEpochAstrometryCu9</span><span class="o">.</span><span class="n">supdate</span><span class="p">(</span><span class="n">d</span><span class="p">,</span> <span class="n">sourceid</span><span class="p">,</span> <span class="n">model</span><span class="p">,</span> <span class="n">compute_excess_noise</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">supdate</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="GaiaSourceEpochAstrometry">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaSourceEpochAstrometry">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">GaiaSourceEpochAstrometry</span><span class="p">(</span><span class="n">GaiaEpochAstrometry</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class for Gaia Epoch Astrometric Data corresponding to an individual source.&quot;&quot;&quot;</span>
+
+<div class="viewcode-block" id="GaiaSourceEpochAstrometry.from_dataframe">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaSourceEpochAstrometry.from_dataframe">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_dataframe</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">df</span><span class="p">,</span> <span class="n">source_id</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Extract data from dataframe and return astropy table for a specific source_id.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        df: Pandas dataframe</span>
+<span class="sd">            Data in pandas format.</span>
+<span class="sd">        source_id: long int</span>
+<span class="sd">            Gaia identifier of the source.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Astropy table</span>
+<span class="sd">            Data in Astropy table format for a specific source_id.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">df</span><span class="p">[</span><span class="bp">cls</span><span class="o">.</span><span class="n">_source_id_field</span><span class="p">]</span><span class="o">.</span><span class="n">unique</span><span class="p">()</span> <span class="o">!=</span> <span class="n">source_id</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s1">&#39;Input dataframe has non-unique or non-matching source_id.&#39;</span><span class="p">)</span>
+        <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">source_id</span><span class="o">=</span><span class="n">source_id</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="GaiaSourceEpochAstrometry.compute_source_update">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaSourceEpochAstrometry.compute_source_update">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compute_source_update</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="s1">&#39;5p_single_source&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Execute source update for model &#39;5p_single_source&#39;.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        model: str</span>
+<span class="sd">            Model corresponding to the number of astrometric parameters to solve. Default: &#39;5p_single_source&#39;.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            The astrometric parameters computed for the source.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">selected_source_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_id</span>
+        <span class="n">result_parameters</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;sourceId&#39;</span><span class="p">:</span> <span class="n">selected_source_id</span><span class="p">}</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">design_parameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">get_design_parameters</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
+            <span class="n">design_equation</span> <span class="o">=</span> <span class="n">DesignEquation</span><span class="p">(</span><span class="n">design_parameters</span><span class="p">)</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="n">design_equation</span><span class="o">.</span><span class="n">solve</span><span class="p">()</span>
+            <span class="n">result_parameters</span><span class="p">[</span><span class="s1">&#39;results&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">results</span>
+            <span class="n">result_parameters</span><span class="p">[</span><span class="s1">&#39;success&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">except</span> <span class="p">(</span><span class="n">LinAlgError</span><span class="p">,</span> <span class="ne">AttributeError</span><span class="p">)</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+            <span class="n">result_parameters</span><span class="p">[</span><span class="s1">&#39;success&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span>
+            <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="n">result_parameters</span></div>
+
+
+<div class="viewcode-block" id="GaiaSourceEpochAstrometry.compute_perspective_acceleration">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaSourceEpochAstrometry.compute_perspective_acceleration">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compute_perspective_acceleration</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">convergence_threshold</span><span class="o">=</span><span class="mf">1e-9</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute a source update with perspective acceleration and return results.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        convergence_threshold: float, optional</span>
+<span class="sd">            Convergence threshold. Default: 1e-9.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            Dictionary containing the results of the computation.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">selected_source_id</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">source_id</span>
+        <span class="n">result_parameters</span> <span class="o">=</span> <span class="p">{</span><span class="s1">&#39;sourceId&#39;</span><span class="p">:</span> <span class="n">selected_source_id</span><span class="p">}</span>
+
+        <span class="n">initial_parameters</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">,</span> <span class="mf">0.</span><span class="p">])</span>
+        <span class="n">results_5p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_source_update_iteratively</span><span class="p">(</span><span class="n">initial_parameters</span><span class="p">,</span> <span class="n">fit_perspective_acceleration</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
+        <span class="n">parameters_5p</span> <span class="o">=</span> <span class="n">results_5p</span><span class="p">[</span><span class="s1">&#39;parameters&#39;</span><span class="p">]</span>
+
+        <span class="n">initial_parameters_perspective_acceleration</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">hstack</span><span class="p">((</span><span class="n">parameters_5p</span><span class="p">,</span> <span class="p">[</span><span class="mi">0</span><span class="p">]))</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_source_update_iteratively</span><span class="p">(</span><span class="n">initial_parameters_perspective_acceleration</span><span class="p">,</span>
+                                                         <span class="n">fit_perspective_acceleration</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span>
+                                                         <span class="n">convergence_threshold</span><span class="o">=</span><span class="n">convergence_threshold</span><span class="p">)</span>
+        <span class="n">result_parameters</span><span class="p">[</span><span class="s1">&#39;results&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">results</span>
+        <span class="n">result_parameters</span><span class="p">[</span><span class="s1">&#39;success&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+        <span class="k">return</span> <span class="n">result_parameters</span></div>
+
+
+<div class="viewcode-block" id="GaiaSourceEpochAstrometry.compute_source_update_iteratively">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaSourceEpochAstrometry.compute_source_update_iteratively">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compute_source_update_iteratively</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">initial_parameters</span><span class="p">,</span> <span class="n">fit_perspective_acceleration</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span>
+                                          <span class="n">n_iterations_max</span><span class="o">=</span><span class="mi">10</span><span class="p">,</span> <span class="n">solver</span><span class="o">=</span><span class="s1">&#39;least_squares&#39;</span><span class="p">,</span> <span class="n">convergence_threshold</span><span class="o">=</span><span class="mf">1e-9</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return iterative source update which allows us to account for perspective acceleration.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        initial_parameters: narray</span>
+<span class="sd">            Initial parameters to start the iteration.</span>
+<span class="sd">        fit_perspective_acceleration: boolean, optional</span>
+<span class="sd">            Whether to fit for perspective acceleration. Default: False</span>
+<span class="sd">        n_iterations_max: int, optional</span>
+<span class="sd">            Number of maximum iterations to perform. Default: 10.</span>
+<span class="sd">        solver: str, optional</span>
+<span class="sd">            Solver to be used. Default: least_squares.</span>
+<span class="sd">        convergence_threshold: float, optional</span>
+<span class="sd">            Maximum convergence threshold. Default: 1e-9.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            The parameters of the solution.</span>
+
+<span class="sd">        Note</span>
+<span class="sd">        ----</span>
+<span class="sd">        Equations were implemented following GAIA-C3-TN-LU-LL-061 (Appendix E) available at `Public DPAC documents &lt;https://www.cosmos.esa.int/web/gaia/public-dpac-documents&gt;`__.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">for</span> <span class="n">col</span> <span class="ow">in</span> <span class="p">[</span><span class="s1">&#39;relative_time_year&#39;</span><span class="p">,</span> <span class="s1">&#39;sin_theta&#39;</span><span class="p">]:</span>
+            <span class="k">if</span> <span class="n">col</span> <span class="ow">not</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span><span class="o">.</span><span class="n">columns</span><span class="p">:</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Method requires column </span><span class="si">{</span><span class="n">col</span><span class="si">}</span><span class="s2"> in epoch data. </span><span class="se">\</span>
+<span class="s2">                Try executing set_relative_time() or set_scan_angle_derived_columns() first.&quot;</span><span class="p">)</span>
+
+        <span class="n">lpc</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span><span class="o">.</span><span class="n">copy</span><span class="p">()</span>
+        <span class="n">lpc</span><span class="p">[</span><span class="s1">&#39;fr&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="n">lpc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_time_barycentric_correction_column</span><span class="p">]</span> <span class="o">/</span> <span class="mf">1e9</span> <span class="o">/</span> <span class="mf">499.004783836156</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">solution_parameters</span> <span class="o">=</span> <span class="n">initial_parameters</span>
+        <span class="k">for</span> <span class="n">iteration_number</span> <span class="ow">in</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">n_iterations_max</span><span class="p">):</span>
+
+            <span class="k">if</span> <span class="n">iteration_number</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">pass</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">results_previous_interation</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">results</span><span class="p">)</span>
+                <span class="n">solution_parameters</span> <span class="o">+=</span> <span class="n">results_previous_interation</span><span class="p">[</span><span class="s1">&#39;parameters&#39;</span><span class="p">]</span>
+
+            <span class="c1"># set initial parameters</span>
+            <span class="k">if</span> <span class="n">fit_perspective_acceleration</span> <span class="ow">is</span> <span class="kc">False</span><span class="p">:</span>
+                <span class="n">mu_r_0</span> <span class="o">=</span> <span class="mi">0</span>
+                <span class="n">model</span> <span class="o">=</span> <span class="s1">&#39;5p_single_source&#39;</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">mu_r_0</span> <span class="o">=</span> <span class="n">solution_parameters</span><span class="p">[</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+                <span class="n">model</span> <span class="o">=</span> <span class="s1">&#39;6p_perspective_acceleration&#39;</span>
+
+            <span class="n">varpi_0</span> <span class="o">=</span> <span class="n">solution_parameters</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span>
+
+            <span class="n">d_factor</span> <span class="o">=</span> <span class="mi">1</span> <span class="o">+</span> <span class="p">(</span><span class="n">lpc</span><span class="p">[</span><span class="s1">&#39;relative_time_year&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">mu_r_0</span> <span class="o">+</span> <span class="n">lpc</span><span class="p">[</span><span class="s1">&#39;fr&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">varpi_0</span><span class="p">)</span> <span class="o">*</span> <span class="n">mas_to_rad</span>
+
+            <span class="n">lpc</span><span class="p">[</span><span class="s1">&#39;sin_theta/d_factor&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lpc</span><span class="p">[</span><span class="s1">&#39;sin_theta&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">d_factor</span>
+            <span class="n">lpc</span><span class="p">[</span><span class="s1">&#39;cos_theta/d_factor&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lpc</span><span class="p">[</span><span class="s1">&#39;cos_theta&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">d_factor</span>
+            <span class="n">lpc</span><span class="p">[</span><span class="s1">&#39;sin_theta_time/d_factor&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lpc</span><span class="p">[</span><span class="s1">&#39;sin_theta_time&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">d_factor</span>
+            <span class="n">lpc</span><span class="p">[</span><span class="s1">&#39;cos_theta_time/d_factor&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lpc</span><span class="p">[</span><span class="s1">&#39;cos_theta_time&#39;</span><span class="p">]</span> <span class="o">/</span> <span class="n">d_factor</span>
+
+            <span class="n">selected_columns_for_w_calculated</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;sin_theta&#39;</span><span class="p">,</span> <span class="s1">&#39;cos_theta&#39;</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">_parallax_factor_column_al</span><span class="p">,</span>
+                                                 <span class="s1">&#39;sin_theta_time&#39;</span><span class="p">,</span> <span class="s1">&#39;cos_theta_time&#39;</span><span class="p">]</span>
+            <span class="n">w_calculated</span> <span class="o">=</span> <span class="p">(</span><span class="n">lpc</span><span class="p">[</span><span class="n">selected_columns_for_w_calculated</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span> <span class="o">@</span> <span class="n">solution_parameters</span><span class="p">[</span><span class="mi">0</span><span class="p">:</span><span class="mi">5</span><span class="p">])</span> <span class="o">/</span> <span class="n">d_factor</span>
+
+            <span class="n">lpc</span><span class="p">[</span><span class="s1">&#39;varpiFactorAl&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">lpc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_parallax_factor_column_al</span><span class="p">]</span> <span class="o">-</span> <span class="n">w_calculated</span> <span class="o">*</span> <span class="n">lpc</span><span class="p">[</span><span class="s1">&#39;fr&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">mas_to_rad</span><span class="p">)</span> <span class="o">/</span> <span class="n">d_factor</span>
+
+            <span class="k">if</span> <span class="n">fit_perspective_acceleration</span><span class="p">:</span>
+                <span class="n">lpc</span><span class="p">[</span><span class="s1">&#39;perspAccelFactor&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="o">-</span><span class="mi">1</span> <span class="o">*</span> <span class="n">w_calculated</span> <span class="o">*</span> <span class="n">lpc</span><span class="p">[</span><span class="s1">&#39;relative_time_year&#39;</span><span class="p">]</span> <span class="o">*</span> <span class="n">mas_to_rad</span> <span class="o">/</span> <span class="n">d_factor</span>
+                <span class="n">selected_columns_for_matrix</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;sin_theta/d_factor&#39;</span><span class="p">,</span> <span class="s1">&#39;cos_theta/d_factor&#39;</span><span class="p">,</span>
+                                               <span class="s1">&#39;varpiFactorAl&#39;</span><span class="p">,</span> <span class="s1">&#39;sin_theta_time/d_factor&#39;</span><span class="p">,</span>
+                                               <span class="s1">&#39;cos_theta_time/d_factor&#39;</span><span class="p">,</span> <span class="s1">&#39;perspAccelFactor&#39;</span><span class="p">]</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="n">selected_columns_for_matrix</span> <span class="o">=</span> <span class="p">[</span><span class="s1">&#39;sin_theta/d_factor&#39;</span><span class="p">,</span> <span class="s1">&#39;cos_theta/d_factor&#39;</span><span class="p">,</span>
+                                               <span class="s1">&#39;varpiFactorAl&#39;</span><span class="p">,</span> <span class="s1">&#39;sin_theta_time/d_factor&#39;</span><span class="p">,</span>
+                                               <span class="s1">&#39;cos_theta_time/d_factor&#39;</span><span class="p">]</span>
+
+            <span class="n">design_parameters</span> <span class="o">=</span> <span class="n">OrderedDict</span><span class="p">()</span>
+            <span class="n">design_parameters</span><span class="p">[</span><span class="s1">&#39;design_matrix_coefficients&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lpc</span><span class="p">[</span><span class="n">selected_columns_for_matrix</span><span class="p">]</span><span class="o">.</span><span class="n">to_numpy</span><span class="p">()</span>
+            <span class="n">design_parameters</span><span class="p">[</span><span class="s1">&#39;dependent_variable&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lpc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_centroid_position_column_al</span><span class="p">]</span><span class="o">.</span><span class="n">values</span> <span class="o">-</span> <span class="n">w_calculated</span><span class="o">.</span><span class="n">values</span>
+            <span class="n">design_parameters</span><span class="p">[</span><span class="s1">&#39;dependent_variable_error&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">lpc</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_centroid_position_error_column_al</span><span class="p">]</span><span class="o">.</span><span class="n">values</span>
+            <span class="n">design_parameters</span><span class="p">[</span><span class="s1">&#39;model&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">model</span>
+
+            <span class="n">design_equation</span> <span class="o">=</span> <span class="n">DesignEquation</span><span class="p">(</span><span class="n">design_parameters</span><span class="p">)</span>
+            <span class="n">results</span> <span class="o">=</span> <span class="n">design_equation</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">solver</span><span class="o">=</span><span class="n">solver</span><span class="p">)</span>
+
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameters&#39;</span><span class="p">])):</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">solution_parameters</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="si">:</span><span class="s2">+15.6f</span><span class="si">}</span><span class="s2"> +/- </span><span class="si">{</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameters_normalised_uncertainty&#39;</span><span class="p">][</span><span class="n">i</span><span class="p">]</span><span class="si">:</span><span class="s2">&lt;+15.6f</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+
+            <span class="n">logging</span><span class="o">.</span><span class="n">debug</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;iteration </span><span class="si">{</span><span class="n">iteration_number</span><span class="si">}</span><span class="s2">: maximum update </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameters&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2"> </span><span class="se">\</span>
+<span class="s2">            minimum update </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameters&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+            <span class="k">if</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameters&#39;</span><span class="p">]))</span> <span class="o">&lt;</span> <span class="n">convergence_threshold</span><span class="p">):</span>
+                <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;iterations converged after </span><span class="si">{</span><span class="n">iteration_number</span><span class="si">}</span><span class="s2"> iterations.&quot;</span><span class="p">)</span>
+                <span class="n">results_previous_interation</span><span class="p">[</span><span class="s1">&#39;parameters&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">solution_parameters</span>
+                <span class="k">return</span> <span class="n">results_previous_interation</span>
+
+        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;iterations did not converge after </span><span class="si">{</span><span class="n">iteration_number</span><span class="si">}</span><span class="s2"> iterations.&quot;</span><span class="p">)</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">warning</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;iteration </span><span class="si">{</span><span class="n">iteration_number</span><span class="si">}</span><span class="s2">: maximum update </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameters&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2"> </span><span class="se">\</span>
+<span class="s2">        minimum update </span><span class="si">{</span><span class="n">np</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">results</span><span class="p">[</span><span class="s1">&#39;parameters&#39;</span><span class="p">])</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="GaiaSourceEpochAstrometryCu9">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaSourceEpochAstrometryCu9">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">GaiaSourceEpochAstrometryCu9</span><span class="p">(</span><span class="n">GaiaEpochAstrometryCu9</span><span class="p">,</span> <span class="n">GaiaSourceEpochAstrometry</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class for Gaia Epoch Astrometric Data in CU9 format corresponding to an individual source.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return string describing the instance.&quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="s1">&#39;GaiaSourceEpochAstrometryCu9 for source_id </span><span class="si">{}</span><span class="s1"> with </span><span class="si">{}</span><span class="s1"> CCD </span><span class="se">\</span>
+<span class="s1">        transits&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">source_id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span><span class="p">))</span>
+
+<div class="viewcode-block" id="GaiaSourceEpochAstrometryCu9.get_design_parameters">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaSourceEpochAstrometryCu9.get_design_parameters">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_design_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filter_on_used_by_agis</span><span class="o">=</span><span class="kc">False</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute the design parameters using class-specific column names.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        filter_on_used_by_agis: boolean, optional</span>
+<span class="sd">            Select whether to follow the selection strategy as AGIS for the parameters computation. Default: False.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">filter_on_used_by_agis</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span><span class="o">.</span><span class="n">epochastrometrycu9</span><span class="o">.</span><span class="n">filter_on_used_by_agis</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span><span class="o">.</span><span class="n">epochastrometrycu9</span><span class="o">.</span><span class="n">set_relative_time</span><span class="p">()</span>
+        <span class="n">design_parameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span><span class="o">.</span><span class="n">epochastrometrycu9</span><span class="o">.</span><span class="n">get_design_equation_parameters</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">design_parameters</span></div>
+
+
+<div class="viewcode-block" id="GaiaSourceEpochAstrometryCu9.compute_source_parameters">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaSourceEpochAstrometryCu9.compute_source_parameters">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compute_source_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">model</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">compute_excess_noise</span><span class="o">=</span><span class="kc">False</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute the astrometric source paramaters.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        model: str, optional</span>
+<span class="sd">            Model corresponding to the number of astrometric parameters to solve. Default: 6p_constrained_colour.</span>
+<span class="sd">        compute_excess_noise: boolean, optional. Default: False.</span>
+<span class="sd">            Whether to fit the excess noise or to use the provided with the epoch astrometry data.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            The astrometric parameters computed for the specified source.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">model</span><span class="p">:</span>
+            <span class="n">model</span> <span class="o">=</span> <span class="s1">&#39;6p_constrained_colour&#39;</span>
+
+        <span class="c1"># apply the appropriate filters</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span><span class="o">.</span><span class="n">epochastrometrycu9</span><span class="o">.</span><span class="n">filter_on_used_by_agis</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span><span class="o">.</span><span class="n">gaiacentroid</span><span class="o">.</span><span class="n">filter_null_from_column</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span><span class="o">.</span><span class="n">epochastrometrycu9</span><span class="o">.</span>
+                                                                               <span class="n">_time_barycentric_correction_column</span><span class="p">)</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span><span class="o">.</span><span class="n">gaiacentroid</span><span class="o">.</span><span class="n">filter_null_from_column</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span><span class="o">.</span><span class="n">epochastrometrycu9</span><span class="o">.</span>
+                                                                               <span class="n">_scan_angle_column</span><span class="p">)</span>
+        <span class="c1"># compute time stamps</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span><span class="o">.</span><span class="n">epochastrometrycu9</span><span class="o">.</span><span class="n">set_relative_time</span><span class="p">()</span>
+        <span class="n">logging</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+
+        <span class="c1"># generate design parameters</span>
+        <span class="n">design_parameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span><span class="o">.</span><span class="n">epochastrometrycu9</span><span class="o">.</span><span class="n">get_design_equation_parameters</span><span class="p">(</span><span class="n">model</span><span class="o">=</span><span class="n">model</span><span class="p">)</span>
+        <span class="n">n_linear_parameters</span> <span class="o">=</span> <span class="n">design_parameters</span><span class="p">[</span><span class="s1">&#39;design_matrix_coefficients&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+
+        <span class="k">if</span> <span class="n">model</span> <span class="o">==</span> <span class="s1">&#39;6p_constrained_colour&#39;</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">n_linear_parameters</span> <span class="o">==</span> <span class="mi">6</span><span class="p">,</span> <span class="s2">&quot;Number of linear parameters should be 6.&quot;</span>
+
+            <span class="c1"># set prior on pseudolour offset</span>
+            <span class="n">prior_strength_nm</span> <span class="o">=</span> <span class="mf">0.085e-3</span>  <span class="c1"># this is in units of 1/nm</span>
+            <span class="n">design_parameters</span><span class="p">[</span><span class="s1">&#39;gaussian_priors&#39;</span><span class="p">]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">([</span><span class="kc">None</span><span class="p">]</span> <span class="o">*</span> <span class="p">(</span><span class="n">n_linear_parameters</span> <span class="o">-</span> <span class="mi">1</span><span class="p">)</span> <span class="o">+</span> <span class="p">[</span><span class="n">prior_strength_nm</span><span class="p">])</span>
+
+        <span class="k">if</span> <span class="n">model</span> <span class="o">==</span> <span class="s1">&#39;5p_single_source&#39;</span><span class="p">:</span>
+            <span class="k">assert</span> <span class="n">n_linear_parameters</span> <span class="o">==</span> <span class="mi">5</span><span class="p">,</span> <span class="s2">&quot;Number of linear parameters should be 5.&quot;</span>
+
+        <span class="c1"># compute design equation</span>
+        <span class="n">design_equation</span> <span class="o">=</span> <span class="n">DesignEquation</span><span class="p">(</span><span class="n">design_parameters</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="ow">not</span> <span class="n">compute_excess_noise</span><span class="p">:</span>
+            <span class="c1"># set excess source noise (this originates from AGIS)</span>
+            <span class="n">excess_source_noise_mas</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="bp">self</span><span class="o">.</span><span class="n">_agis_source_excess_noise_column</span><span class="p">]</span>
+            <span class="n">excess_source_variance</span> <span class="o">=</span> <span class="n">excess_source_noise_mas</span><span class="o">**</span><span class="mi">2</span>
+            <span class="n">total_variance</span> <span class="o">=</span> <span class="n">design_equation</span><span class="o">.</span><span class="n">observation_variances</span> <span class="o">+</span> <span class="n">excess_source_variance</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">total_variance</span> <span class="o">=</span> <span class="kc">None</span>
+
+        <span class="c1"># compute source parameters but solving equations</span>
+        <span class="n">results</span> <span class="o">=</span> <span class="n">design_equation</span><span class="o">.</span><span class="n">solve</span><span class="p">(</span><span class="n">solver</span><span class="o">=</span><span class="s1">&#39;agis&#39;</span><span class="p">,</span> <span class="n">total_variance</span><span class="o">=</span><span class="n">total_variance</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">results</span></div>
+
+
+<div class="viewcode-block" id="GaiaSourceEpochAstrometryCu9.compute_source_parameters_like_dr4">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaSourceEpochAstrometryCu9.compute_source_parameters_like_dr4">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">compute_source_parameters_like_dr4</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute the astrometric source paramaters with a DR4-like configuration.</span>
+
+<span class="sd">        This will generate the best-possible reproduction of the DR4 astrometric parameters.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        dict</span>
+<span class="sd">            The astrometric parameters computed for the specified source.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="n">model</span> <span class="o">=</span> <span class="s1">&#39;6p_constrained_colour&#39;</span>
+        <span class="n">compute_excess_noise</span> <span class="o">=</span> <span class="kc">False</span>
+
+        <span class="n">results</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">compute_source_parameters</span><span class="p">(</span><span class="n">model</span><span class="p">,</span> <span class="n">compute_excess_noise</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">results</span></div>
+</div>
+
+
+
+<div class="viewcode-block" id="GaiaSourceEpochAstrometryArchive">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaSourceEpochAstrometryArchive">[docs]</a>
+<span class="k">class</span><span class="w"> </span><span class="nc">GaiaSourceEpochAstrometryArchive</span><span class="p">(</span><span class="n">GaiaEpochAstrometryArchive</span><span class="p">,</span> <span class="n">GaiaSourceEpochAstrometry</span><span class="p">):</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;Class for Gaia Epoch Astrometric Data in the Gaia Archive format corresponding to an individual source.&quot;&quot;&quot;</span>
+
+    <span class="k">def</span><span class="w"> </span><span class="fm">__str__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Return a string describing the instance.</span>
+
+<span class="sd">        Constructor of GaiaSourceEpochAstrometryArchive.</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">return</span> <span class="s1">&#39;GaiaSourceEpochAstrometryArchive for source_id </span><span class="si">{}</span><span class="s1"> with </span><span class="si">{}</span><span class="s1"> </span><span class="se">\</span>
+<span class="s1">        CCD transits&#39;</span><span class="o">.</span><span class="n">format</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">source_id</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span><span class="p">))</span>
+
+<div class="viewcode-block" id="GaiaSourceEpochAstrometryArchive.get_design_parameters">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaSourceEpochAstrometryArchive.get_design_parameters">[docs]</a>
+    <span class="k">def</span><span class="w"> </span><span class="nf">get_design_parameters</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">filter_on_used_by_agis</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="o">**</span><span class="n">kwargs</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Compute the design parameters using class-specific column names.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        filter_on_used_by_agis: boolean, optional</span>
+<span class="sd">            Select whether to follow the selection strategy as AGIS for the parameters computation.</span>
+<span class="sd">            Default: True</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        design parameters: OrderedDict</span>
+<span class="sd">            Dictionary containing the design_matrix_coefficients and auxiliary data.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="n">filter_on_used_by_agis</span><span class="p">:</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span><span class="o">.</span><span class="n">epochastrometryarchive</span><span class="o">.</span><span class="n">filter_on_used_by_agis</span><span class="p">()</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span><span class="o">.</span><span class="n">epochastrometryarchive</span><span class="o">.</span><span class="n">set_relative_time</span><span class="p">()</span>
+        <span class="n">design_parameters</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">epoch_data</span><span class="o">.</span><span class="n">epochastrometryarchive</span><span class="o">.</span><span class="n">get_design_equation_parameters</span><span class="p">(</span><span class="o">**</span><span class="n">kwargs</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">design_parameters</span></div>
+
+
+<div class="viewcode-block" id="GaiaSourceEpochAstrometryArchive.from_gacs_datalink">
+<a class="viewcode-back" href="../../gaiasupdate.html#gaiasupdate.epoch_astrometry.GaiaSourceEpochAstrometryArchive.from_gacs_datalink">[docs]</a>
+    <span class="nd">@classmethod</span>
+    <span class="k">def</span><span class="w"> </span><span class="nf">from_gacs_datalink</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">source_id</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s1">&#39;votable&#39;</span><span class="p">,</span> <span class="n">gaia_data_server</span><span class="o">=</span><span class="s1">&#39;https://gea.esac.esa.int/&#39;</span><span class="p">,</span>
+                           <span class="n">credentials_file</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span> <span class="n">data_release</span><span class="o">=</span><span class="s1">&#39;Gaia DR4_INT4&#39;</span><span class="p">,</span> <span class="n">data_structure</span><span class="o">=</span><span class="s1">&#39;RAW&#39;</span><span class="p">,</span>
+                           <span class="n">retrieval_type</span><span class="o">=</span><span class="s1">&#39;EPOCH_ASTROMETRY&#39;</span><span class="p">):</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;Query Gaia Archive to retrive EpochAstrometry data of a specific object.</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        source_id: long int</span>
+<span class="sd">            Gaia identifier of the source being queried.</span>
+<span class="sd">        format: str, optional</span>
+<span class="sd">            Format of the data to be retrieved. It can be VOTable, CSV, ECSV, FITS or parquet</span>
+<span class="sd">        gaia_data_server: str, optional</span>
+<span class="sd">            URL of the Archive data server. Default is https://gea.esac.esa.int/</span>
+<span class="sd">        credentials_file: str, optional</span>
+<span class="sd">            Local path of the txt file containing the user Archive credentials.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Astropy table</span>
+<span class="sd">            Table that contains the epoch astrometry data requested to the Gaia Archive.</span>
+
+<span class="sd">        &quot;&quot;&quot;</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">gaia_data_server</span> <span class="o">!=</span> <span class="s1">&#39;https://gea.esac.esa.int/&#39;</span><span class="p">)</span> <span class="ow">or</span> <span class="p">(</span><span class="n">credentials_file</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">):</span>
+            <span class="n">gaia</span> <span class="o">=</span> <span class="n">GaiaClass</span><span class="p">(</span><span class="n">gaia_tap_server</span><span class="o">=</span><span class="n">gaia_data_server</span><span class="p">,</span> <span class="n">gaia_data_server</span><span class="o">=</span><span class="n">gaia_data_server</span><span class="p">)</span>
+            <span class="n">gaia</span><span class="o">.</span><span class="n">login</span><span class="p">(</span><span class="n">credentials_file</span><span class="o">=</span><span class="n">credentials_file</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">gaia</span> <span class="o">=</span> <span class="n">Gaia</span><span class="p">()</span>
+
+        <span class="n">ea_data</span> <span class="o">=</span> <span class="n">gaia</span><span class="o">.</span><span class="n">load_data</span><span class="p">(</span><span class="n">ids</span><span class="o">=</span><span class="p">[</span><span class="n">source_id</span><span class="p">],</span> <span class="n">data_release</span><span class="o">=</span><span class="n">data_release</span><span class="p">,</span>
+                                 <span class="n">retrieval_type</span><span class="o">=</span><span class="n">retrieval_type</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="nb">format</span><span class="p">,</span>
+                                 <span class="n">data_structure</span><span class="o">=</span><span class="n">data_structure</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">format</span> <span class="o">==</span> <span class="s1">&#39;votable&#39;</span><span class="p">:</span>
+            <span class="n">epoch_astro_df</span> <span class="o">=</span> <span class="n">ea_data</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">retrieval_type</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">data_release</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">source_id</span><span class="si">}</span><span class="s2">.xml&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">to_table</span><span class="p">()</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
+            <span class="n">epoch_astro_df</span> <span class="o">=</span> <span class="n">GaiaEpochAstrometryArchive</span><span class="o">.</span><span class="n">astropy_table_to_df</span><span class="p">(</span><span class="n">epoch_astro_df</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">format</span> <span class="o">==</span> <span class="s1">&#39;csv&#39;</span><span class="p">:</span>
+            <span class="n">epoch_astro_df</span> <span class="o">=</span> <span class="n">ea_data</span><span class="p">[</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">retrieval_type</span><span class="si">}</span><span class="s2">-</span><span class="si">{</span><span class="n">data_release</span><span class="si">}</span><span class="s2"> </span><span class="si">{</span><span class="n">source_id</span><span class="si">}</span><span class="s2">.csv&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">to_pandas</span><span class="p">()</span>
+
+        <span class="k">return</span> <span class="bp">cls</span><span class="o">.</span><span class="n">from_dataframe</span><span class="p">(</span><span class="n">epoch_astro_df</span><span class="p">,</span> <span class="n">source_id</span><span class="p">)</span></div>
+</div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, European Space Agency (ESA).</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

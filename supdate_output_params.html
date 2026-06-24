@@ -1,0 +1,245 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Output parameters &mdash; gaiasupdate 0.1.dev1+g0c25c91a1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=6982ef98"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="gaiasupdate" href="modules.html" />
+    <link rel="prev" title="Tools" href="tools.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            gaiasupdate
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Usage</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="tools.html">Tools</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Output parameters</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Package documentation</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="modules.html">gaiasupdate</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Other</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="citation_license.html">Citation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="citation_license.html#license">License</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">gaiasupdate</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Output parameters</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <a class="reference internal image-reference" href="_images/gaia_mission_logo.png"><img alt="Gaia mission logo" class="align-right" src="_images/gaia_mission_logo.png" style="width: 200px;" />
+</a>
+<section id="output-parameters">
+<h1>Output parameters<a class="headerlink" href="#output-parameters" title="Link to this heading"></a></h1>
+<p>This is a descriptive summary of the output parameters of <cite>supdate</cite> method.</p>
+<p>When <cite>supdate</cite> is executed without the arguments <em>model</em> and <em>compute_excess_noise</em>, the default behaviour computes the astrometric parameters as in DR4, which uses Heaviside’s weights and is not recomputing the excess source noise of the observations.</p>
+<div class="line-block">
+<div class="line"><strong>model</strong></div>
+<div class="line">Model used to compute the astrometric solution.</div>
+<div class="line">Default: ‘6p_constrained_colour’</div>
+<div class="line">Type: string</div>
+</div>
+<div class="line-block">
+<div class="line"><strong>solver</strong></div>
+<div class="line">Solver used to compute the astrometric solution.</div>
+<div class="line">Default: ‘agis’</div>
+<div class="line">Type: string</div>
+</div>
+<div class="line-block">
+<div class="line"><strong>parameters</strong></div>
+<div class="line">Array of the computed astrometric parameters in the following order:</div>
+</div>
+<ul class="simple">
+<li><p>offset in right ascension [marcsec]</p></li>
+<li><p>offset in declination [marcsec]</p></li>
+<li><p>parallax [mas]</p></li>
+<li><p>proper motion in right ascension direction [mas yr−1]</p></li>
+<li><p>proper motion in declination direction [mas yr−1]</p></li>
+<li><p>pseudocolour difference defined as: gaiasupdate_pseudocolour = ( archive_pseudocolour - archive_nu_eff_used_in_astrometry ) * 1e-3 [µm−1]</p></li>
+</ul>
+<div class="line-block">
+<div class="line">Type: narray</div>
+</div>
+<div class="line-block">
+<div class="line"><strong>residuals</strong></div>
+<div class="line">Difference between the observed and the predicted values.</div>
+<div class="line">Type: narray</div>
+</div>
+<div class="line-block">
+<div class="line"><strong>index_keep</strong></div>
+<div class="line">Indices of the measurements that are not outliers.</div>
+<div class="line">Type: narray</div>
+</div>
+<div class="line-block">
+<div class="line"><strong>timestamps_of_used_observations</strong></div>
+<div class="line">Dataframe containing columns of the used observations times: <em>obsTimeTcb</em> and <em>relative_time_year</em>.</div>
+<div class="line">Type: dataframe</div>
+</div>
+<div class="line-block">
+<div class="line"><strong>weights</strong></div>
+<div class="line">Numerical coefficients assigned to the observations to reflect their influence in the final result.</div>
+<div class="line">Type: narray</div>
+</div>
+<div class="line-block">
+<div class="line"><strong>n_data_total</strong></div>
+<div class="line">Number of total observations.</div>
+<div class="line">Type: int</div>
+</div>
+<div class="line-block">
+<div class="line"><strong>n_measurements</strong></div>
+<div class="line">Number of accepted observations.</div>
+<div class="line">Type: int</div>
+</div>
+<div class="line-block">
+<div class="line"><strong>parameter_covariance_matrix_formal_inverse</strong></div>
+<div class="line">The inverse of the covariance matrix of the estimated parameters’ formal errors.</div>
+<div class="line">Type: narray</div>
+</div>
+<div class="line-block">
+<div class="line"><strong>parameter_covariance_matrix_formal</strong></div>
+<div class="line">The covariance matrix of the estimated parameters formal errors.</div>
+<div class="line">Type: narray</div>
+</div>
+<div class="line-block">
+<div class="line"><strong>parameters_formal_uncertainty</strong></div>
+<div class="line">Array of formal uncertainties of the astrometric parameters in the same order as the <em>parameters</em> array.</div>
+<div class="line">Type: narray</div>
+</div>
+<div class="line-block">
+<div class="line"><strong>n_parameters</strong></div>
+<div class="line">Number of astrometric parameters to be solved.</div>
+<div class="line">Default: 6</div>
+<div class="line">Type: int</div>
+</div>
+<div class="line-block">
+<div class="line"><strong>excess_noise</strong></div>
+<div class="line">Excess noise of the source [marcsec].</div>
+<div class="line">Type: double</div>
+</div>
+<div class="line-block">
+<div class="line"><strong>n_outliers</strong></div>
+<div class="line">Number of outlier observations.</div>
+<div class="line">Type: int</div>
+</div>
+<div class="line-block">
+<div class="line"><strong>significance</strong></div>
+<div class="line">Significance of excess noise of the source.</div>
+<div class="line">Type: double</div>
+</div>
+<div class="line-block">
+<div class="line"><strong>total_variance</strong></div>
+<div class="line">Total variance.</div>
+<div class="line">Type: narray</div>
+</div>
+<div class="line-block">
+<div class="line"><strong>measurement_variance</strong></div>
+<div class="line">Variance of the observation.</div>
+<div class="line">Type: narray</div>
+</div>
+<div class="line-block">
+<div class="line"><strong>parameter_covariance_matrix_normalised</strong></div>
+<div class="line">Normalised covariance matrix of the parameters.</div>
+<div class="line">Type: narray</div>
+</div>
+<div class="line-block">
+<div class="line"><strong>parameters_normalised_uncertainty</strong></div>
+<div class="line">Normalised covariance matrix of the parameters’ formal errors.</div>
+<div class="line">Type: narray</div>
+</div>
+<div class="line-block">
+<div class="line"><strong>solution_statistic</strong></div>
+<div class="line">Contains statistical parameters such as:</div>
+<div class="line"><em>n_parameters</em>, <em>n_measurements</em>, <em>residuals</em>, <em>total_variance</em>, <em>measurement_variance</em>, <em>model</em>,</div>
+<div class="line"><em>solver</em>, <em>excess_noise</em>, <em>n_outliers</em>, <em>n_degrees_of_freedom</em>, <em>chi2</em>, <em>chi2_total</em>, <em>ln_likelihood</em>,</div>
+<div class="line"><em>bic</em>, <em>aic</em>, <em>f2</em>, <em>f2_total</em>, <em>residuals_rms</em>, <em>residuals_mean</em>.</div>
+<div class="line">Use the dot (.) operator or <em>getattr</em> to access this object properties or call its functions.</div>
+<div class="line">Type: object</div>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, European Space Agency (ESA).</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
