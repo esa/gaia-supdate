@@ -1,0 +1,50 @@
+#   Copyright (c) European Space Agency, 2026.
+#
+#   This file is subject to the terms and conditions defined in file "LICENSE.txt", which
+#   is part of this source code package. No part of the package, including
+#   this file, may be copied, modified, propagated, or distributed except according to
+#   the terms contained in the file "LICENSE.txt".
+
+name: syntax_quality
+
+on:
+  push:
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Install Flake8
+      run: pip install flake8 flake8-pyproject
+      
+    - name: Run Flake8
+      run: flake8 . --statistics
+      
+    - name: Install pydocstyle
+      run: pip install "pydocstyle[toml]"
+
+    - name: Run pydocstyle
+      run: pydocstyle .
+
+    - name: Install pyroma
+      run: pip install pyroma
+      
+    - name: Check package quality
+      run: pyroma .
+
