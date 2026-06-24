@@ -6,14 +6,14 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Installation &mdash; gaiasupdate 0.1.dev1+gae5a2d446 documentation</title>
+  <title>Installation &mdash; gaiasupdate 0.1.dev1+g674777b38 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
 
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=3781f6e3"></script>
+      <script src="_static/documentation_options.js?v=b29c9466"></script>
       <script src="_static/doctools.js?v=fd6eb6e6"></script>
       <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
@@ -97,7 +97,7 @@
 <li><p>pyarrow</p></li>
 <li><p>astroquery</p></li>
 </ul>
-<p>See <a class="reference external" href="../requirements.txt">requirements.txt</a> file for more details.</p>
+<p>See <a class="reference external" href="https://github.com/esa/gaia-supdate/blob/main/requirements.txt">requirements.txt</a> file for more details.</p>
 <ol class="arabic">
 <li><p>From source:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ git clone https://github.com/esa/gaia-supdate
@@ -112,8 +112,9 @@ $ pip install -e .
 </div>
 </li>
 <li><p>Using conda environment:</p>
-<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ conda create --name gaiasupdateEnv --yes python=3.12 -r requirements.txt
-$ conda activate gaiasupdateEnv
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>$ conda create --name gaiasupdate-env --yes python=3.12 -r requirements.txt
+$ conda activate gaiasupdate-env
+$ conda install gaiasupdate
 </pre></div>
 </div>
 </li>
