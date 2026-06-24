@@ -9,7 +9,8 @@ name: build_documentation
 
 on:
   push:
-    branches:
+    tags:
+      - "v*"
 
 jobs:
   build-and-deploy:
