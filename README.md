@@ -10,6 +10,7 @@
 [![License: ESA permissive](https://img.shields.io/badge/ESA%20Public%20License-Permissive-blue.svg)](https://github.com/esa/gaia-supdate/blob/main/LICENSE.txt)
 [![pipeline status](https://github.com/esa/gaia-supdate/actions/workflows/ci_run_tests.yml/badge.svg)](https://github.com/esa/gaia-supdate/actions/workflows/ci_run_tests.yml)
 [![Documentation](https://github.com//esa/gaia-supdate/actions/workflows/ci_build_documentation.yml/badge.svg)](https://esa.github.io/gaia-supdate)
+[![DOI](https://zenodo.org/badge/1251355888.svg)](https://doi.org/10.5281/zenodo.20924676)
 
 <img src="https://esa.github.io/gaia-supdate/_images/gaia_mission_logo.png" alt="drawing" width="200"/>
 
@@ -55,14 +56,6 @@ pip install -e .
 pip install gaiasupdate
 ```
 
-#### Using conda environment
-
-```commandline
-conda create --name gaiasupdate-env --yes python=3.12 -r requirements.txt
-conda activate gaiasupdate-env
-conda install gaiasupdate
-```
-
 ### Usage examples
 
 A notebook to show how to use `gaiasupdate` to compute source astrometric parameters from epoch astrometry data can be found at https://github.com/esa/gaia-jupyter-notebooks/tree/main/data-release-4-tutorials
@@ -77,7 +70,7 @@ The package documentation can be found at https://esa.github.io/gaia-supdate.
 
 ### Citation
 
-If you make use of `gaiasupdate` in your research or otherwise, we would appreciate a citation of ZENODO BADGE and an acknowledgement along the lines of: 
+If you make use of `gaiasupdate` in your research or otherwise, we would appreciate a citation of [![DOI](https://zenodo.org/badge/1251355888.svg)](https://doi.org/10.5281/zenodo.20924676) and an acknowledgement along the lines of: 
 
 "This work made use of the `gaiasupdate` package that is described at https://www.cosmos.esa.int/web/gaia/gaia-source-update.
 

@@ -40,8 +40,3 @@ See `requirements.txt <https://github.com/esa/gaia-supdate/blob/main/requirement
     $ pip install gaiasupdate
 
 
-3. Using conda environment::
-
-    $ conda create --name gaiasupdate-env --yes python=3.12 -r requirements.txt
-    $ conda activate gaiasupdate-env
-    $ conda install gaiasupdate
